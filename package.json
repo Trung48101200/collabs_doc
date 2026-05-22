@@ -1,0 +1,11 @@
+{
+  "name": "collaborative-document-editing-system",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm:dev --prefix backend\" \"npm:dev --prefix frontend\"",
+    "install:all": "npm install --prefix backend && npm install --prefix frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
