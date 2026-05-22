@@ -6,7 +6,9 @@ import {
   getRole,
   listDocumentsForUser,
   listVersions,
-  updateDocumentSnapshot
+  updateDocumentSnapshot,
+  findVersionById,
+  restoreDocument
 } from "../models/document.model.js";
 import { httpError } from "../utils/http-error.js";
 
@@ -36,12 +38,20 @@ export async function getDocument(documentId, userId) {
   const role = await assertCanRead(documentId, userId);
   const doc = await findDocumentById(documentId);
   if (!doc) throw httpError(404, "Document not found");
+  
+  // Convert Buffer to base64 if ydoc_state exists in doc
+  if (doc && doc.ydoc_state) {
+    doc.ydocState = doc.ydoc_state.toString("base64");
+  }
+  
   return { ...doc, role };
 }
 
 export async function saveDocument(documentId, userId, payload) {
   await assertCanEdit(documentId, userId);
-  return updateDocumentSnapshot(documentId, payload);
+  await updateDocumentSnapshot(documentId, payload);
+  await createVersion(documentId, userId);
+  return getDocument(documentId, userId);
 }
 
 export async function removeDocument(documentId, userId) {
@@ -58,4 +68,18 @@ export async function getDocumentVersions(documentId, userId) {
 export async function snapshotVersion(documentId, userId) {
   await assertCanEdit(documentId, userId);
   return createVersion(documentId, userId);
+}
+
+export async function getVersionDetail(documentId, versionId, userId) {
+  await assertCanRead(documentId, userId);
+  const version = await findVersionById(documentId, versionId);
+  if (!version) throw httpError(404, "Version not found");
+  return version;
+}
+
+export async function restoreVersion(documentId, versionId, userId) {
+  await assertCanEdit(documentId, userId);
+  const restoredDoc = await restoreDocument(documentId, versionId);
+  if (!restoredDoc) throw httpError(404, "Version or Document not found");
+  return restoredDoc;
 }

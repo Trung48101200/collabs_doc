@@ -1,0 +1,537 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Collab Doc Backend API",
+    "description": "Tài liệu API và giao diện kiểm thử cho Hệ thống soạn thảo văn bản cộng tác (collabs_doc)",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Nhập mã thông báo JWT của bạn dưới dạng: `<token>`"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Nguyen Van A" },
+          "email": { "type": "string", "example": "nva@example.com" }
+        }
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "title": { "type": "string", "example": "Báo cáo Hệ thống phân tán" },
+          "contentText": { "type": "string", "example": "Nội dung văn bản..." },
+          "contentJson": { "type": "object", "example": { "type": "doc", "content": [] } },
+          "contentHtml": { "type": "string", "example": "<p>Nội dung văn bản...</p>" },
+          "ownerId": { "type": "integer", "example": 1 },
+          "currentVersion": { "type": "integer", "example": 1 },
+          "role": { "type": "string", "example": "owner" }
+        }
+      },
+      "Collaborator": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "integer", "example": 2 },
+          "name": { "type": "string", "example": "Tran Van B" },
+          "email": { "type": "string", "example": "tvb@example.com" },
+          "role": { "type": "string", "enum": ["owner", "editor", "viewer"], "example": "editor" }
+        }
+      },
+      "Version": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "versionNumber": { "type": "integer", "example": 1 },
+          "contentText": { "type": "string", "example": "Nội dung phiên bản cũ..." },
+          "createdBy": { "type": "integer", "example": 2 },
+          "createdAt": { "type": "string", "example": "2026-05-22T08:00:00.000Z" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Đăng ký tài khoản mới",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string", "example": "Nguyen Van A" },
+                  "email": { "type": "string", "example": "nva@example.com" },
+                  "password": { "type": "string", "minLength": 6, "example": "password123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Đăng ký thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "User registered successfully" },
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Dữ liệu không hợp lệ hoặc email đã tồn tại" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Đăng nhập hệ thống",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "example": "nva@example.com" },
+                  "password": { "type": "string", "example": "password123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đăng nhập thành công, trả về Access và Refresh Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Login successful" },
+                    "token": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+                    "accessToken": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+                    "refreshToken": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Sai email hoặc mật khẩu" }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Làm mới Access Token bằng Refresh Token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Làm mới thành công, trả về Access Token mới",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessToken": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+                    "token": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Refresh token không hợp lệ hoặc đã hết hạn" }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Đăng xuất tài khoản, thu hồi Refresh Token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đăng xuất thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Logged out successfully" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Lấy thông tin tài khoản hiện hành",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Trả về thông tin user",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+          },
+          "401": { "description": "Chưa xác thực hoặc token hết hạn" }
+        }
+      }
+    },
+    "/api/documents": {
+      "get": {
+        "tags": ["Documents"],
+        "summary": "Lấy danh sách tất cả tài liệu có quyền truy cập",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Danh sách tài liệu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Document" }
+                }
+              }
+            }
+          },
+          "401": { "description": "Chưa xác thực" }
+        }
+      },
+      "post": {
+        "tags": ["Documents"],
+        "summary": "Tạo một tài liệu mới",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title"],
+                "properties": {
+                  "title": { "type": "string", "example": "Báo cáo mới" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tạo tài liệu thành công",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Document" } } }
+          },
+          "401": { "description": "Chưa xác thực" }
+        }
+      }
+    },
+    "/api/documents/{id}": {
+      "get": {
+        "tags": ["Documents"],
+        "summary": "Xem chi tiết một tài liệu",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chi tiết tài liệu",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Document" } } }
+          },
+          "403": { "description": "Không có quyền truy cập tài liệu này" },
+          "404": { "description": "Không tìm thấy tài liệu" }
+        }
+      },
+      "put": {
+        "tags": ["Documents"],
+        "summary": "Cập nhật snapshot nội dung tài liệu",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string", "example": "Báo cáo đã sửa tiêu đề" },
+                  "contentText": { "type": "string", "example": "Nội dung plain text cập nhật" },
+                  "contentJson": { "type": "object", "example": { "type": "doc", "content": [] } },
+                  "contentHtml": { "type": "string", "example": "<p>Nội dung HTML cập nhật</p>" },
+                  "ydocState": { "type": "string", "description": "Base64 encoded Yjs state value" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cập nhật thành công",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Document" } } }
+          },
+          "403": { "description": "Không có quyền ghi (chỉ viewer)" }
+        }
+      },
+      "delete": {
+        "tags": ["Documents"],
+        "summary": "Xóa một tài liệu",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "204": { "description": "Xóa tài liệu thành công" },
+          "403": { "description": "Chỉ có Owner mới có quyền xóa tài liệu" }
+        }
+      }
+    },
+    "/api/documents/{id}/collaborators": {
+      "get": {
+        "tags": ["Collaborators"],
+        "summary": "Lấy danh sách tất cả cộng tác viên",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách cộng tác viên",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Collaborator" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Collaborators"],
+        "summary": "Mời một cộng tác viên mới vào tài liệu",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "role"],
+                "properties": {
+                  "email": { "type": "string", "example": "tvb@example.com" },
+                  "role": { "type": "string", "enum": ["editor", "viewer"], "example": "editor" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Thêm cộng tác viên thành công"
+          },
+          "403": { "description": "Chỉ Owner mới có quyền mời cộng tác viên" },
+          "404": { "description": "Email không tồn tại trong hệ thống" }
+        }
+      }
+    },
+    "/api/documents/{id}/collaborators/{userId}": {
+      "put": {
+        "tags": ["Collaborators"],
+        "summary": "Thay đổi vai trò của cộng tác viên (Hoặc chuyển nhượng Owner)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["role"],
+                "properties": {
+                  "role": { "type": "string", "enum": ["owner", "editor", "viewer"], "example": "editor" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Cập nhật vai trò thành công" },
+          "403": { "description": "Chỉ Owner mới có quyền đổi vai trò người khác" }
+        }
+      },
+      "delete": {
+        "tags": ["Collaborators"],
+        "summary": "Xóa cộng tác viên khỏi tài liệu (Hoặc tự rời đi)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "204": { "description": "Xóa cộng tác viên thành công" },
+          "403": { "description": "Chỉ Owner mới được xóa người khác, hoặc tự user rời đi" }
+        }
+      }
+    },
+    "/api/documents/{id}/versions": {
+      "get": {
+        "tags": ["Versions"],
+        "summary": "Lấy danh sách tất cả các phiên bản lịch sử",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách phiên bản lịch sử",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Version" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Versions"],
+        "summary": "Tạo một phiên bản lịch sử snapshot từ trạng thái hiện tại",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "201": {
+            "description": "Lưu snapshot version thành công",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Document" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents/{id}/versions/{versionId}": {
+      "get": {
+        "tags": ["Versions"],
+        "summary": "Xem thông tin chi tiết (gồm snapshot dữ liệu) của một phiên bản lịch sử",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "versionId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thông tin chi tiết phiên bản lịch sử",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "integer", "example": 1 },
+                    "versionNumber": { "type": "integer", "example": 1 },
+                    "contentText": { "type": "string", "example": "Nội dung..." },
+                    "contentJson": { "type": "object", "example": { "type": "doc" } },
+                    "contentHtml": { "type": "string", "example": "<p>Nội dung</p>" },
+                    "ydocState": { "type": "string", "description": "Base64 encoded snapshot state" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents/{id}/versions/{versionId}/restore": {
+      "post": {
+        "tags": ["Versions"],
+        "summary": "Khôi phục tài liệu về phiên bản lịch sử đã chọn",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "versionId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Khôi phục tài liệu thành công, trả về trạng thái tài liệu mới",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Document restored successfully" },
+                    "document": { "$ref": "#/components/schemas/Document" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
