@@ -5,7 +5,9 @@ import {
   getDocumentVersions,
   removeDocument,
   saveDocument,
-  snapshotVersion
+  snapshotVersion,
+  getVersionDetail,
+  restoreVersion
 } from "../services/document.service.js";
 
 export async function listDocuments(req, res, next) {
@@ -61,6 +63,41 @@ export async function listVersionsAction(req, res, next) {
 export async function createVersionAction(req, res, next) {
   try {
     res.status(201).json(await snapshotVersion(Number(req.params.id), req.user.id));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getVersionDetailAction(req, res, next) {
+  try {
+    const documentId = Number(req.params.id);
+    const versionId = Number(req.params.versionId);
+    const version = await getVersionDetail(documentId, versionId, req.user.id);
+    res.json(version);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function restoreVersionAction(req, res, next) {
+  try {
+    const documentId = Number(req.params.id);
+    const versionId = Number(req.params.versionId);
+    const restoredDoc = await restoreVersion(documentId, versionId, req.user.id);
+    
+    // Broadcast websocket update that the document has been restored
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`document:${documentId}`).emit("version-restored", {
+        documentId,
+        ydocState: restoredDoc.ydocState || (restoredDoc.ydoc_state ? restoredDoc.ydoc_state.toString("base64") : null)
+      });
+    }
+
+    res.json({
+      message: "Document restored successfully",
+      document: restoredDoc
+    });
   } catch (error) {
     next(error);
   }

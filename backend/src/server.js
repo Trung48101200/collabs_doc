@@ -3,10 +3,22 @@ import http from "node:http";
 import express from "express";
 import cors from "cors";
 import { Server } from "socket.io";
+import swaggerUi from "swagger-ui-express";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { documentRoutes } from "./routes/document.routes.js";
 import { authRoutes } from "./routes/auth.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { registerDocumentSocket } from "./sockets/document.socket.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const swaggerDocument = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "./config/swagger.json"), "utf8")
+);
 
 const app = express();
 const server = http.createServer(app);
@@ -20,8 +32,13 @@ const io = new Server(server, {
   }
 });
 
+app.set("io", io);
+
 app.use(cors({ origin: clientOrigin }));
 app.use(express.json({ limit: "10mb" }));
+
+// Swagger UI Route
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
@@ -36,4 +53,5 @@ registerDocumentSocket(io);
 const port = Number(process.env.PORT || 4000);
 server.listen(port, () => {
   console.log(`Backend listening on http://localhost:${port}`);
+  console.log(`Swagger API docs available at http://localhost:${port}/api-docs`);
 });

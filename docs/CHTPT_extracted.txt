@@ -1,0 +1,316 @@
+
+Thiết kế hệ thống soạn thảo văn bản cộng tác
+Hướng thiết kế dùng React + TipTap + Yjs + Socket.IO + Node.js + Express + MySQL, trong đó nội dung rich text được lưu bằng JSON snapshot.
+1. Công nghệ sử dụng
+Thành phần
+Công nghệ
+Vai trò
+Frontend
+React
+Xây dựng giao diện, trang tài liệu, toolbar và trạng thái người dùng.
+Rich text editor
+TipTap
+Hỗ trợ bôi đậm, in nghiêng, tiêu đề, căn lề, danh sách, link, màu chữ, highlight.
+Realtime sync
+Yjs
+CRDT để đồng bộ nội dung và định dạng khi nhiều người sửa đồng thời.
+Realtime transport
+Socket.IO
+Truyền Yjs update, cursor, user online, reconnect event giữa client và server.
+Backend
+Node.js + Express
+Cung cấp HTTP API, kiểm tra quyền, xử lý tài liệu, version và lưu trữ.
+Database
+MySQL
+Lưu user, document metadata, rich text JSON, HTML, text preview, Yjs state và version.
+
+2. Chức năng hệ thống
+Nhóm
+Chức năng cơ bản
+Tài liệu
+Tạo, mở, sửa, đổi tên và xóa tài liệu.
+Soạn thảo
+Soạn thảo rich text: bold, italic, underline, heading, căn lề, bullet list, numbered list, link, color, highlight.
+Realtime
+Nhiều người cùng chỉnh sửa một tài liệu và thấy thay đổi gần thời gian thực.
+Đồng bộ
+Yjs/CRDT merge thay đổi đồng thời, tránh mất dữ liệu khi nhiều client sửa cùng lúc.
+Người dùng
+Hiển thị danh sách user online, cursor và vùng chọn của từng user.
+Lưu trữ
+Lưu metadata, content_text, content_json, content_html và ydoc_state vào MySQL.
+
+Nhóm
+Chức năng nâng cao
+Versioning
+Lưu lịch sử phiên bản bằng JSON/HTML/Text snapshot và Yjs snapshot.
+Undo/redo
+Undo/redo bằng Y.UndoManager, ưu tiên scope theo thay đổi của user hiện tại.
+Offline editing
+Client lưu state local bằng Yjs/IndexedDB, reconnect thì đồng bộ lại với server.
+Permission
+Phân quyền owner, editor, viewer ở cả API và WebSocket.
+Cursor awareness
+Hiển thị tên, màu, vị trí con trỏ và vùng chọn của user khác.
+
+3. Cấu trúc dữ liệu MySQL theo hướng lưu JSON
+Do hệ thống hỗ trợ văn bản định dạng giàu, tài liệu không chỉ lưu plain text. Mỗi document nên lưu nhiều biểu diễn khác nhau để phục vụ các mục đích riêng.
+Trường
+Kiểu dữ liệu
+Mục đích
+content_text
+LONGTEXT
+Dùng cho preview, tìm kiếm, hiển thị danh sách tài liệu.
+content_json
+JSON
+Lưu cấu trúc rich text của TipTap, giữ định dạng như heading, bold, align, list.
+content_html
+LONGTEXT
+Dùng cho hiển thị nhanh, export hoặc render phía server nếu cần.
+ydoc_state
+LONGBLOB
+Lưu trạng thái Yjs để phục hồi realtime collaboration chính xác.
+
+3.1. Bảng users
+CREATE TABLE users (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) UNIQUE,
+  password_hash VARCHAR(255),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+3.2. Bảng documents
+CREATE TABLE documents (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  title VARCHAR(255) NOT NULL,
+  content_text LONGTEXT,
+  content_json JSON,
+  content_html LONGTEXT,
+  ydoc_state LONGBLOB,
+  owner_id BIGINT NOT NULL,
+  current_version INT DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (owner_id) REFERENCES users(id)
+);
+3.3. Bảng document_collaborators
+CREATE TABLE document_collaborators (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  document_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  role ENUM('owner', 'editor', 'viewer') NOT NULL DEFAULT 'editor',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_document_user (document_id, user_id),
+  FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+3.4. Bảng document_versions
+CREATE TABLE document_versions (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  document_id BIGINT NOT NULL,
+  version_number INT NOT NULL,
+  content_text LONGTEXT,
+  content_json JSON,
+  content_html LONGTEXT,
+  ydoc_snapshot LONGBLOB,
+  created_by BIGINT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id)
+);
+3.5. Bảng document_updates
+CREATE TABLE document_updates (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  document_id BIGINT NOT NULL,
+  user_id BIGINT,
+  update_data LONGBLOB NOT NULL,
+  client_id VARCHAR(100),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+Bảng document_updates dùng để lưu các Yjs update nhỏ. Bảng documents và document_versions lưu snapshot đầy đủ để load nhanh, restore version và giảm chi phí replay quá nhiều update.
+4. API HTTP cần chỉnh khi lưu JSON
+Khi dùng TipTap, API không nên chỉ nhận trường content dạng chuỗi. API nên nhận và trả về contentText, contentJson, contentHtml và ydocState.
+4.1. Auth/User
+POST /api/auth/register
+POST /api/auth/login
+GET  /api/users/me
+4.2. Document
+GET    /api/documents
+POST   /api/documents
+GET    /api/documents/:id
+PUT    /api/documents/:id
+DELETE /api/documents/:id
+Ví dụ response khi mở tài liệu:
+{
+  "id": 1,
+  "title": "Báo cáo hệ thống phân tán",
+  "contentText": "Hello world",
+  "contentJson": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          { "type": "text", "text": "Hello world" }
+        ]
+      }
+    ]
+  },
+  "contentHtml": "<p>Hello world</p>",
+  "version": 3,
+  "role": "editor"
+}
+Ví dụ request khi lưu tài liệu:
+{
+  "title": "Báo cáo hệ thống phân tán",
+  "contentText": "Hello world edited",
+  "contentJson": { "type": "doc", "content": [] },
+  "contentHtml": "<p>Hello world edited</p>",
+  "ydocState": "base64-encoded-yjs-state"
+}
+4.3. Collaborator/Permission
+GET    /api/documents/:id/collaborators
+POST   /api/documents/:id/collaborators
+PUT    /api/documents/:id/collaborators/:userId
+DELETE /api/documents/:id/collaborators/:userId
+4.4. Versioning
+GET  /api/documents/:id/versions
+POST /api/documents/:id/versions
+GET  /api/documents/:id/versions/:versionId
+POST /api/documents/:id/versions/:versionId/restore
+Khi tạo version, server lưu contentText, contentJson, contentHtml và ydocSnapshot để có thể xem lại hoặc restore đầy đủ định dạng.
+4.5. Sync
+GET  /api/documents/:id/sync-state
+POST /api/documents/:id/sync-state
+GET  /api/documents/:id/updates?after=<updateId>
+5. WebSocket event
+WebSocket không gửi toàn bộ JSON sau mỗi lần gõ. Realtime chỉ nên gửi Yjs update nhỏ. JSON/HTML/Text snapshot dùng cho load lần đầu, autosave, version và restore.
+Nhóm
+Event
+Vai trò
+Document room
+join-document, leave-document
+Client vào/rời room theo documentId.
+Realtime sync
+yjs-update, sync-state-request, sync-state-response
+Đồng bộ thay đổi nội dung và định dạng bằng Yjs.
+Awareness/cursor
+awareness-update, cursor-update, selection-update, user-list
+Hiển thị user online, cursor và vùng chọn.
+Save/version
+save-document, document-saved, create-version, version-created
+Autosave hoặc tạo snapshot version.
+Permission
+permission-updated, access-denied, document-locked
+Thông báo thay đổi quyền hoặc từ chối thao tác.
+Connection/offline
+reconnect-sync, pending-updates, sync-completed, user-disconnected
+Hỗ trợ offline editing và đồng bộ lại.
+
+5.1. Ví dụ payload
+Client join document:
+socket.emit("join-document", {
+  documentId: 1,
+  user: { id: 2, name: "Binh", color: "#2f80ed" }
+});
+Client gửi Yjs update:
+socket.emit("yjs-update", {
+  documentId: 1,
+  userId: 2,
+  update: Array.from(update),
+  clientId: "client_abc_123"
+});
+Server broadcast update cho client khác trong cùng room:
+socket.to(`document:${documentId}`).emit("yjs-update", {
+  documentId,
+  userId,
+  update,
+  clientId
+});
+6. Frontend với TipTap
+Frontend là nơi tạo ra rich text JSON. TipTap xử lý toolbar và cấu trúc tài liệu, sau đó cung cấp JSON/HTML/Text để gửi về server khi lưu.
+Extension TipTap
+Chức năng
+StarterKit
+Paragraph, heading, bold, italic, list, blockquote, history cơ bản.
+Collaboration
+Kết nối editor với Y.Doc để collaborative editing.
+CollaborationCursor
+Hiển thị cursor và tên người dùng khác.
+Underline
+Gạch chân.
+TextAlign
+Căn trái, giữa, phải, đều cho heading/paragraph.
+Link
+Chèn và chỉnh sửa liên kết.
+TextStyle + Color
+Đổi màu chữ.
+Highlight
+Tô nền/highlight đoạn văn bản.
+
+Các lệnh lưu snapshot ở frontend:
+const payload = {
+  title,
+  contentText: editor.getText(),
+  contentJson: editor.getJSON(),
+  contentHtml: editor.getHTML(),
+  ydocState: encodeStateAsBase64(ydoc)
+};
+Khi mở tài liệu từ API, frontend có thể phục hồi nội dung bằng contentJson nếu chưa dùng ydoc_state:
+editor.commands.setContent(document.contentJson);
+7. Quy tắc lưu dữ liệu
+Khi người dùng gõ, client không gửi toàn bộ JSON mà gửi Yjs update qua Socket.IO.
+Server kiểm tra quyền editor/owner trước khi chấp nhận update.
+Server broadcast Yjs update cho các client khác trong cùng document room.
+Autosave định kỳ 5-10 giây lưu content_text, content_json, content_html và ydoc_state vào MySQL.
+Khi tạo version, server lưu snapshot vào bảng document_versions.
+Khi restore version, server cập nhật lại documents và broadcast sync-state-response cho các client đang mở.
+8. Phân quyền
+Role
+Xem
+Sửa
+Xóa document
+Mời user
+Đổi quyền
+Restore version
+owner
+Có
+Có
+Có
+Có
+Có
+Có
+editor
+Có
+Có
+Không
+Không
+Không
+Có thể cho phép hoặc không
+viewer
+Có
+Không
+Không
+Không
+Không
+Không
+
+Frontend có thể ẩn hoặc khóa toolbar với viewer, nhưng backend vẫn phải kiểm tra quyền ở API và WebSocket để tránh sửa trái phép.
+9. Offline editing
+Khi mất mạng, client hiển thị trạng thái Offline nhưng vẫn cho editor tiếp tục chỉnh sửa local.
+Yjs giữ thay đổi local; có thể kết hợp IndexedDB để không mất dữ liệu khi reload.
+Khi reconnect, client join lại document room và gửi các pending updates.
+Server merge update bằng Yjs rồi gửi sync-state-response để các client đạt cùng trạng thái.
+10. Kịch bản demo
+User A đăng nhập và tạo tài liệu mới.
+A mời User B với quyền editor và User C với quyền viewer.
+A và B cùng chỉnh sửa văn bản rich text: heading, bold, căn giữa, bullet list.
+C mở tài liệu, xem được nội dung nhưng không chỉnh sửa được.
+A và B nhìn thấy cursor/vùng chọn của nhau.
+B mất mạng, tiếp tục sửa offline, sau đó reconnect và đồng bộ lại.
+A tạo version, xem lịch sử và restore một version cũ.
+Reload trang, nội dung và định dạng vẫn được lưu từ content_json/ydoc_state.
+11. Kết luận thiết kế
+Sau khi chuyển sang hướng lưu JSON, hệ thống cần xem content_json là snapshot chính cho rich text, content_text là bản text phục vụ preview/tìm kiếm, content_html là bản render nhanh, còn ydoc_state là trạng thái cộng tác realtime. Cách tách này giúp hệ thống vừa hỗ trợ định dạng văn bản đầy đủ, vừa đảm bảo đồng bộ phân tán bằng Yjs.

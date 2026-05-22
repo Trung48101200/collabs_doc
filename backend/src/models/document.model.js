@@ -1,4 +1,5 @@
 import { db } from "../config/db.js";
+import * as Y from "yjs";
 
 export async function listDocumentsForUser(userId) {
   const [rows] = await db.execute(
@@ -117,4 +118,87 @@ export async function createVersion(documentId, userId) {
   );
 
   return { ...doc, versionNumber };
+}
+
+export async function findVersionById(documentId, versionId) {
+  const [rows] = await db.execute(
+    `SELECT id, document_id AS documentId, version_number AS versionNumber,
+            content_text AS contentText, content_json AS contentJson,
+            content_html AS contentHtml, ydoc_snapshot AS ydocSnapshot,
+            created_by AS createdBy, created_at AS createdAt
+       FROM document_versions
+      WHERE document_id = ? AND id = ?`,
+    [documentId, versionId]
+  );
+  if (rows[0] && rows[0].ydocSnapshot) {
+    // Convert Buffer to base64 string for API response
+    rows[0].ydocState = rows[0].ydocSnapshot.toString("base64");
+  }
+  return rows[0] || null;
+}
+
+export async function restoreDocument(documentId, versionId) {
+  const version = await findVersionById(documentId, versionId);
+  if (!version) return null;
+
+  await db.execute(
+    `UPDATE documents
+        SET content_text = ?,
+            content_json = ?,
+            content_html = ?,
+            ydoc_state = ?,
+            current_version = ?
+      WHERE id = ?`,
+    [
+      version.contentText || "",
+      JSON.stringify(version.contentJson),
+      version.contentHtml || "",
+      version.ydocSnapshot,
+      version.versionNumber,
+      documentId
+    ]
+  );
+
+  return findDocumentById(documentId);
+}
+
+export async function saveYjsUpdateAndMerge(documentId, userId, updateData, clientId) {
+  const updateBuffer = Buffer.from(updateData);
+  
+  // 1. Save small update to document_updates table
+  await db.execute(
+    `INSERT INTO document_updates (document_id, user_id, update_data, client_id)
+     VALUES (?, ?, ?, ?)`,
+    [documentId, userId, updateBuffer, clientId || null]
+  );
+
+  // 2. Fetch current ydoc_state from documents
+  const [rows] = await db.execute(
+    `SELECT ydoc_state FROM documents WHERE id = ?`,
+    [documentId]
+  );
+  
+  const currentYdocState = rows[0]?.ydoc_state;
+
+  // 3. Initialize Y.Doc and apply current state
+  const ydoc = new Y.Doc();
+  if (currentYdocState) {
+    Y.applyUpdate(ydoc, new Uint8Array(currentYdocState));
+  }
+
+  // 4. Apply the new update
+  Y.applyUpdate(ydoc, new Uint8Array(updateBuffer));
+
+  // 5. Encode the new merged state as update
+  const mergedState = Y.encodeStateAsUpdate(ydoc);
+
+  // 6. Update the ydoc_state in documents table
+  await db.execute(
+    `UPDATE documents
+        SET ydoc_state = ?
+      WHERE id = ?`,
+    [Buffer.from(mergedState), documentId]
+  );
+
+  return mergedState;
 }

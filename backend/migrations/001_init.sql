@@ -59,6 +59,22 @@ CREATE TABLE IF NOT EXISTS document_updates (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  token VARCHAR(255) NOT NULL UNIQUE,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS blacklisted_tokens (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  token VARCHAR(500) NOT NULL UNIQUE,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 INSERT INTO users (id, name, email)
 VALUES (1, 'Demo User', 'demo@example.com')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
