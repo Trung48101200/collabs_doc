@@ -56,3 +56,11 @@ backend/src/
 3. Service kiem tra role `owner` hoac `editor`.
 4. Repository luu update vao `document_updates` va merge vao `ydoc_state`.
 5. Server broadcast update cho cac client khac trong room.
+
+## Luong tao ban sao tai lieu
+
+1. User goi `POST /api/documents/:id/copy`.
+2. Service kiem tra user co quyen doc document goc.
+3. Repository copy snapshot sang document moi.
+4. User hien tai duoc gan role `owner` cua ban sao.
+5. Collaborator cua document goc khong duoc copy sang ban sao.

@@ -38,6 +38,18 @@ export class DocumentService {
     });
   }
 
+  async copyDocument(documentId, userId, title) {
+    await this.assertCanRead(documentId, userId);
+    const copiedDocument = await this.repository.copyDocument({
+      sourceDocumentId: documentId,
+      ownerId: userId,
+      title
+    });
+
+    if (!copiedDocument) throw httpError(404, "Document not found");
+    return { ...copiedDocument, role: "owner" };
+  }
+
   async getDocument(documentId, userId) {
     const role = await this.assertCanRead(documentId, userId);
     const document = await this.repository.findDocumentById(documentId);
@@ -126,8 +138,8 @@ export class DocumentService {
   }
 
   async changeCollaboratorRole(documentId, targetUserId, currentUserId, role) {
-    if (!role || !["owner", "editor", "viewer"].includes(role)) {
-      throw httpError(400, "Valid role is required ('owner', 'editor', 'viewer')");
+    if (!role || !["editor", "viewer"].includes(role)) {
+      throw httpError(400, "Valid role is required ('editor', 'viewer')");
     }
 
     await this.assertOwner(documentId, currentUserId);
@@ -138,14 +150,6 @@ export class DocumentService {
 
     const targetRole = await this.repository.getRole(documentId, targetUserId);
     if (!targetRole) throw httpError(404, "Collaborator not found for this document");
-
-    if (role === "owner") {
-      await this.repository.transferOwnership(documentId, currentUserId, targetUserId);
-      return {
-        message: "Ownership transferred successfully. You are now an editor.",
-        collaborator: { userId: targetUserId, role }
-      };
-    }
 
     const result = await this.repository.updateCollaboratorRole(documentId, targetUserId, role);
     return {
@@ -164,7 +168,7 @@ export class DocumentService {
     const targetRole = await this.repository.getRole(documentId, targetUserId);
     if (!targetRole) throw httpError(404, "Collaborator not found");
     if (targetRole === "owner") {
-      throw httpError(400, "Cannot remove the owner. Transfer ownership first.");
+      throw httpError(400, "Cannot remove the owner.");
     }
 
     await this.repository.removeCollaborator(documentId, targetUserId);
