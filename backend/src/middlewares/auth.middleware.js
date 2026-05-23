@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { httpError } from "../utils/http-error.js";
-import { isTokenBlacklisted } from "../models/token.model.js";
+import { tokenRepository } from "../modules/auth/token.repository.js";
 
 export async function authMiddleware(req, _res, next) {
   const authHeader = req.headers.authorization;
@@ -10,8 +10,7 @@ export async function authMiddleware(req, _res, next) {
 
   const token = authHeader.split(" ")[1];
   try {
-    const isBlacklisted = await isTokenBlacklisted(token);
-    console.log(`[authMiddleware] Token: ${token.substring(0, 20)}..., isBlacklisted: ${isBlacklisted}`);
+    const isBlacklisted = await tokenRepository.isTokenBlacklisted(token);
     if (isBlacklisted) {
       return next(httpError(401, "Invalid or expired token."));
     }

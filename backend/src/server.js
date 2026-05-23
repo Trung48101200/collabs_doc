@@ -8,8 +8,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { documentRoutes } from "./routes/document.routes.js";
-import { authRoutes } from "./routes/auth.routes.js";
+import { connectDatabase } from "./config/db.js";
+import { documentRoutes } from "./modules/document/document.routes.js";
+import { authRoutes } from "./modules/auth/auth.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { registerDocumentSocket } from "./sockets/document.socket.js";
 
@@ -51,7 +52,16 @@ app.use(errorHandler);
 registerDocumentSocket(io);
 
 const port = Number(process.env.PORT || 4000);
-server.listen(port, () => {
-  console.log(`Backend listening on http://localhost:${port}`);
-  console.log(`Swagger API docs available at http://localhost:${port}/api-docs`);
+
+async function startServer() {
+  await connectDatabase();
+  server.listen(port, () => {
+    console.log(`Backend listening on http://localhost:${port}`);
+    console.log(`Swagger API docs available at http://localhost:${port}/api-docs`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error("Failed to start backend", error);
+  process.exit(1);
 });

@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import * as Y from "yjs";
-import { getRole, saveYjsUpdateAndMerge } from "../models/document.model.js";
-import { isTokenBlacklisted } from "../models/token.model.js";
+import { documentService } from "../modules/document/document.service.js";
+import { tokenRepository } from "../modules/auth/token.repository.js";
 
 const activeUsersByDocument = new Map();
 
@@ -36,7 +36,7 @@ export function registerDocumentSocket(io) {
     }
     
     try {
-      const isBlacklisted = await isTokenBlacklisted(token);
+      const isBlacklisted = await tokenRepository.isTokenBlacklisted(token);
       if (isBlacklisted) {
         return next(new Error("Authentication error. Invalid or expired token."));
       }
@@ -62,7 +62,7 @@ export function registerDocumentSocket(io) {
         const userId = socket.data.user.id;
         
         // Query database to check if user has access
-        const role = await getRole(documentId, userId);
+        const role = await documentService.assertCanRead(documentId, userId);
         if (!role) {
           socket.emit("access-denied", {
             documentId,
@@ -103,7 +103,7 @@ export function registerDocumentSocket(io) {
         
         // DB Fallback if role is not cached
         if (!role) {
-          role = await getRole(documentId, socket.data.user.id);
+          role = await documentService.assertCanRead(documentId, socket.data.user.id);
           if (role) {
             socket.data.roles.set(String(documentId), role);
           }
@@ -119,7 +119,12 @@ export function registerDocumentSocket(io) {
         }
 
         // PERSISTENCE: Save update and merge Yjs state in DB
-        await saveYjsUpdateAndMerge(documentId, socket.data.user.id, update, clientId);
+        await documentService.acceptRealtimeUpdate({
+          documentId,
+          userId: socket.data.user.id,
+          update,
+          clientId
+        });
 
         // Broadcast Yjs update to other collaborators in the room
         socket.to(getRoom(documentId)).emit("yjs-update", {
@@ -140,9 +145,7 @@ export function registerDocumentSocket(io) {
         if (!role) return; // User must have joined the document room
 
         // Fetch current document ydoc_state from DB
-        const { db } = await import("../config/db.js");
-        const [rows] = await db.execute("SELECT ydoc_state FROM documents WHERE id = ?", [documentId]);
-        const currentYdocState = rows[0]?.ydoc_state;
+        const currentYdocState = await documentService.getYdocState(documentId, socket.data.user.id);
 
         let responseUpdate = null;
         if (currentYdocState) {
