@@ -339,6 +339,38 @@
         }
       }
     },
+    "/api/documents/{id}/copy": {
+      "post": {
+        "tags": ["Documents"],
+        "summary": "Tạo bản sao tài liệu",
+        "description": "User có quyền xem tài liệu, bao gồm owner, editor và viewer, đều có thể tạo một bản sao thuộc về chính mình.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string", "example": "Bản sao báo cáo" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tạo bản sao thành công",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Document" } } }
+          },
+          "403": { "description": "Không có quyền xem tài liệu gốc" },
+          "404": { "description": "Không tìm thấy tài liệu gốc" }
+        }
+      }
+    },
     "/api/documents/{id}/collaborators": {
       "get": {
         "tags": ["Collaborators"],
@@ -395,7 +427,7 @@
     "/api/documents/{id}/collaborators/{userId}": {
       "put": {
         "tags": ["Collaborators"],
-        "summary": "Thay đổi vai trò của cộng tác viên (Hoặc chuyển nhượng Owner)",
+        "summary": "Thay đổi vai trò của cộng tác viên",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
@@ -409,7 +441,7 @@
                 "type": "object",
                 "required": ["role"],
                 "properties": {
-                  "role": { "type": "string", "enum": ["owner", "editor", "viewer"], "example": "editor" }
+                  "role": { "type": "string", "enum": ["editor", "viewer"], "example": "editor" }
                 }
               }
             }

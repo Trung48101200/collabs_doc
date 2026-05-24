@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
 import {
+  copyDocumentAction,
   createDocumentAction,
   createVersionAction,
   deleteDocumentAction,
@@ -27,6 +28,7 @@ documentRoutes.post("/", createDocumentAction);
 documentRoutes.get("/:id", getDocumentAction);
 documentRoutes.put("/:id", updateDocumentAction);
 documentRoutes.delete("/:id", deleteDocumentAction);
+documentRoutes.post("/:id/copy", copyDocumentAction);
 
 documentRoutes.get("/:id/collaborators", getCollaboratorsAction);
 documentRoutes.post("/:id/collaborators", inviteCollaboratorAction);

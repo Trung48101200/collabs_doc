@@ -17,6 +17,19 @@ export async function createDocumentAction(req, res, next) {
   }
 }
 
+export async function copyDocumentAction(req, res, next) {
+  try {
+    const doc = await documentService.copyDocument(
+      Number(req.params.id),
+      req.user.id,
+      req.body.title
+    );
+    res.status(201).json(doc);
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function getDocumentAction(req, res, next) {
   try {
     res.json(await documentService.getDocument(Number(req.params.id), req.user.id));
