@@ -24,18 +24,16 @@ const swaggerDocument = JSON.parse(
 const app = express();
 const server = http.createServer(app);
 
-const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
-
 const io = new Server(server, {
   cors: {
-    origin: clientOrigin,
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"]
   }
 });
 
 app.set("io", io);
 
-app.use(cors({ origin: clientOrigin }));
+app.use(cors({ origin: "*" }));
 app.use(express.json({ limit: "10mb" }));
 
 // Swagger UI Route
