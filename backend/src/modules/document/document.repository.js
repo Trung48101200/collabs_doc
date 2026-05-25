@@ -112,6 +112,39 @@ export class DocumentRepository {
     return this.findDocumentById(document.id);
   }
 
+  async copyDocument({ sourceDocumentId, ownerId, title }) {
+    const source = await Document.findByPk(sourceDocumentId);
+    if (!source) return null;
+
+    const document = await Document.create({
+      title: title || `${source.title} (Copy)`,
+      contentText: source.contentText || "",
+      contentJson: source.contentJson || { type: "doc", content: [] },
+      contentHtml: source.contentHtml || "",
+      ydocState: source.ydocState || null,
+      ownerId,
+      currentVersion: 1
+    });
+
+    await DocumentCollaborator.create({
+      documentId: document.id,
+      userId: ownerId,
+      role: "owner"
+    });
+
+    await DocumentVersion.create({
+      documentId: document.id,
+      versionNumber: 1,
+      contentText: document.contentText,
+      contentJson: document.contentJson,
+      contentHtml: document.contentHtml,
+      ydocSnapshot: document.ydocState,
+      createdBy: ownerId
+    });
+
+    return this.findDocumentById(document.id);
+  }
+
   async findDocumentById(id) {
     const document = await Document.findByPk(id);
     return serializeDocument(document);
@@ -273,12 +306,6 @@ export class DocumentRepository {
       { where: { documentId, userId } }
     );
     return { documentId, userId, role };
-  }
-
-  async transferOwnership(documentId, currentOwnerId, nextOwnerId) {
-    await this.updateCollaboratorRole(documentId, currentOwnerId, "editor");
-    await this.updateCollaboratorRole(documentId, nextOwnerId, "owner");
-    await Document.update({ ownerId: nextOwnerId }, { where: { id: documentId } });
   }
 
   async removeCollaborator(documentId, userId) {

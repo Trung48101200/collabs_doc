@@ -9,6 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { connectDatabase } from "./config/db.js";
+import { runMigration } from "./config/migrate.js";
 import { documentRoutes } from "./modules/document/document.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
@@ -52,6 +53,7 @@ registerDocumentSocket(io);
 const port = Number(process.env.PORT || 4000);
 
 async function startServer() {
+  await runMigration();
   await connectDatabase();
   server.listen(port, () => {
     console.log(`Backend listening on http://localhost:${port}`);
