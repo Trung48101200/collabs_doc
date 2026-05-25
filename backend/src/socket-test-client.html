@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Socket.IO & Yjs Real-time Testbench</title>
+  <!-- Google Fonts & Tailwind CSS for visuals -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --panel-dark: #1e293b;
+      --accent-blue: #3b82f6;
+      --accent-green: #10b981;
+      --accent-yellow: #f59e0b;
+      --accent-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    h1, h2, h3 {
+      font-weight: 600;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1.5fr;
+      gap: 2rem;
+    }
+
+    header {
+      grid-column: span 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 1rem;
+    }
+
+    .badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .badge-disconnected { background-color: var(--accent-red); color: white; }
+    .badge-connected { background-color: var(--accent-green); color: black; }
+    .badge-offline { background-color: var(--accent-yellow); color: black; }
+
+    .card {
+      background: var(--panel-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      margin-bottom: 1.5rem;
+    }
+
+    .card h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--accent-blue);
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background-color: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.6rem 0.8rem;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    button {
+      background-color: var(--accent-blue);
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button.btn-secondary {
+      background-color: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    button.btn-secondary:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    button.btn-danger {
+      background-color: var(--accent-red);
+    }
+
+    button.btn-warning {
+      background-color: var(--accent-yellow);
+      color: black;
+    }
+
+    .user-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background-color: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      padding: 0.3rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin-right: 0.4rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .user-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .tracker-box {
+      width: 100%;
+      height: 180px;
+      background-color: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+      cursor: crosshair;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .tracker-cursor {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      transition: all 0.05s ease-out;
+    }
+
+    .tracker-label {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 0.7rem;
+      transform: translate(-50%, -180%);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .log-panel {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      height: 520px;
+      background-color: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 1rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .log-entry {
+      border-left: 3px solid var(--border-color);
+      padding-left: 0.5rem;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .log-entry.sent { border-color: var(--accent-blue); }
+    .log-entry.received { border-color: var(--accent-green); }
+    .log-entry.info { border-color: var(--text-muted); }
+    .log-entry.error { border-color: var(--accent-red); }
+
+    .log-time { color: var(--text-muted); font-size: 0.75rem; margin-right: 0.5rem; }
+    .log-direction { font-weight: bold; margin-right: 0.5rem; }
+    .log-direction.sent { color: var(--accent-blue); }
+    .log-direction.received { color: var(--accent-green); }
+    .log-payload { color: #cbd5e1; white-space: pre-wrap; word-break: break-all; margin-top: 0.2rem; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1 style="font-size: 1.75rem; margin-bottom: 0.25rem;">Real-time Socket & Yjs Testbench</h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Công cụ kiểm thử dành cho <strong>Đạt</strong> để test Socket.IO, Yjs, Cursors & Offline Sync</p>
+    </div>
+    <div>
+      <span id="connection-status" class="badge badge-disconnected">Chưa kết nối</span>
+    </div>
+  </header>
+
+  <div class="container">
+    
+    <!-- LEFT PANEL: CONTROLS -->
+    <div>
+      
+      <!-- CARD 1: REST AUTH -->
+      <div class="card">
+        <h2>🔑 Bước 1: REST Đăng nhập & Lấy Token</h2>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="auth-email">Email</label>
+            <input type="email" id="auth-email" value="demo@example.com">
+          </div>
+          <div class="form-group">
+            <label for="auth-password">Mật khẩu</label>
+            <input type="password" id="auth-password" value="password123">
+          </div>
+        </div>
+        <div class="btn-group">
+          <button id="btn-login">Đăng nhập</button>
+          <button id="btn-register" class="btn-secondary">Đăng ký mới</button>
+        </div>
+        <div style="margin-top: 1rem;">
+          <label>Access Token nhận được:</label>
+          <textarea id="auth-token" rows="2" style="font-size: 0.75rem; font-family: monospace;" placeholder="Nhấp Đăng nhập để tự động lấy token..." readonly></textarea>
+        </div>
+      </div>
+
+      <!-- CARD 2: SOCKET CONNECTION & ROOMS -->
+      <div class="card">
+        <h2>🔌 Bước 2: Kết nối & Vào phòng tài liệu</h2>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="socket-url">Socket Endpoint</label>
+            <input type="text" id="socket-url" value="http://localhost:4000">
+          </div>
+          <div class="form-group">
+            <label for="doc-id">Document ID</label>
+            <input type="number" id="doc-id" value="1">
+          </div>
+        </div>
+        <div class="btn-group" style="margin-bottom: 1rem;">
+          <button id="btn-connect">1. Thiết lập Kết nối</button>
+          <button id="btn-disconnect" class="btn-danger btn-secondary" disabled>Ngắt kết nối</button>
+        </div>
+        <div class="btn-group">
+          <button id="btn-join" class="btn-warning" disabled>2. Vào phòng (Join)</button>
+          <button id="btn-leave" class="btn-secondary" disabled>Rời phòng (Leave)</button>
+        </div>
+
+        <div style="margin-top: 1.25rem;">
+          <label>Cộng tác viên đang Online trong phòng:</label>
+          <div id="online-users" style="min-height: 40px; padding: 0.5rem; background: var(--bg-dark); border-radius: 6px; border: 1px solid var(--border-color);">
+            <span style="color: var(--text-muted); font-size: 0.85rem;">Chưa vào phòng tài liệu...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3: OFFLINE SYNC SIMULATOR -->
+      <div class="card">
+        <h2>📶 Mô phỏng Offline & Reconnect</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+          Nhấn nút để ngắt mạng socket tạm thời, soạn thảo nội dung offline (Yjs lưu các thay đổi lại), sau đó Reconnect để tự động chạy so khớp vector Yjs đồng bộ ngược lên server.
+        </p>
+        <div class="btn-group">
+          <button id="btn-simulate-offline" class="btn-warning" disabled>Tắt mạng (Simulate Offline)</button>
+          <button id="btn-reconnect-sync" class="btn-green" style="background-color: var(--accent-green); color: black;" disabled>Kết nối lại & Sync Vector</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL: INTERACTIVE SOẠN THẢO & LOGS -->
+    <div>
+      
+      <!-- CARD 4: YJS COLLABORATIVE EDITOR SIMULATOR -->
+      <div class="card">
+        <h2>📝 Yjs Collaborative Editor (Giả lập TipTap)</h2>
+        <div class="form-group">
+          <label>Nội dung văn bản đồng bộ Yjs hiện tại (Local Text):</label>
+          <textarea id="editor-textarea" rows="4" placeholder="Văn bản đang đồng bộ thời gian thực qua Yjs CRDT..." disabled></textarea>
+        </div>
+        <div class="btn-group">
+          <button id="btn-send-update" disabled>Mô phỏng Gõ chữ (Gửi Yjs Update)</button>
+          <button id="btn-undo" class="btn-secondary" disabled>Undo (Y.UndoManager)</button>
+          <button id="btn-redo" class="btn-secondary" disabled>Redo (Y.UndoManager)</button>
+        </div>
+      </div>
+
+      <!-- CARD 5: CURSOR TRACKING CANVAS -->
+      <div class="card">
+        <h2>🖱️ Giả lập Cursor Awareness & Hover Selection</h2>
+        <div class="form-group">
+          <label>Di chuột trong vùng này để gửi tọa độ con trỏ (cursor-update) đến phòng:</label>
+          <div id="tracker-canvas" class="tracker-box">
+            Di chuột vào đây để truyền phát Cursor và Selection...
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 6: EVENT LOGGER -->
+      <div class="card" style="margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <h2 style="margin-bottom: 0;">📊 Nhật ký sự kiện thời gian thực (Console Log)</h2>
+          <button id="btn-clear-log" class="btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.8rem;">Xóa Logs</button>
+        </div>
+        <div id="log-panel" class="log-panel">
+          <div class="log-entry info">
+            <span class="log-time">System</span>
+            <span class="log-payload">Chào Đạt! Hãy làm theo <b>Bước 1</b> để bắt đầu kiểm thử luồng Socket.IO & Yjs của bạn.</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script type="module">
+    import * as Y from "https://esm.sh/yjs@13.6.21";
+    // State management
+    let accessToken = "";
+    let socket = null;
+    let currentDocId = null;
+    let userId = null;
+    let userName = "";
+    
+    // Yjs Local Instance
+    const ydoc = new Y.Doc();
+    const ytext = ydoc.getText("shared-content");
+    const undoManager = new Y.UndoManager(ytext);
+
+    // DOM Elements
+    const connectionStatus = document.getElementById("connection-status");
+    const emailInput = document.getElementById("auth-email");
+    const passwordInput = document.getElementById("auth-password");
+    const tokenTextarea = document.getElementById("auth-token");
+    const socketUrlInput = document.getElementById("socket-url");
+    const docIdInput = document.getElementById("doc-id");
+    const onlineUsersDiv = document.getElementById("online-users");
+    const editorTextarea = document.getElementById("editor-textarea");
+    const trackerCanvas = document.getElementById("tracker-canvas");
+    const logPanel = document.getElementById("log-panel");
+
+    // Buttons
+    const btnLogin = document.getElementById("btn-login");
+    const btnRegister = document.getElementById("btn-register");
+    const btnConnect = document.getElementById("btn-connect");
+    const btnDisconnect = document.getElementById("btn-disconnect");
+    const btnJoin = document.getElementById("btn-join");
+    const btnLeave = document.getElementById("btn-leave");
+    const btnSimulateOffline = document.getElementById("btn-simulate-offline");
+    const btnReconnectSync = document.getElementById("btn-reconnect-sync");
+    const btnSendUpdate = document.getElementById("btn-send-update");
+    const btnUndo = document.getElementById("btn-undo");
+    const btnRedo = document.getElementById("btn-redo");
+    const btnClearLog = document.getElementById("btn-clear-log");
+
+    // Yjs Text event binding with smart cursor-preservation check
+    ytext.observe(event => {
+      if (editorTextarea.value !== ytext.toString()) {
+        const start = editorTextarea.selectionStart;
+        const end = editorTextarea.selectionEnd;
+        editorTextarea.value = ytext.toString();
+        editorTextarea.setSelectionRange(start, end);
+      }
+    });
+
+    // Support direct typing in the textarea
+    editorTextarea.addEventListener("input", () => {
+      if (!socket || !currentDocId) return;
+
+      const newVal = editorTextarea.value;
+      ydoc.transact(() => {
+        ytext.delete(0, ytext.length);
+        ytext.insert(0, newVal);
+      });
+
+      const update = Y.encodeStateAsUpdate(ydoc);
+      socket.emit("yjs-update", {
+        documentId: currentDocId,
+        userId: userId,
+        update: Array.from(update),
+        clientId: "client_testbench_" + socket.id
+      });
+    });
+
+    // Logging helpers
+    function log(type, direction, label, payload) {
+      const entry = document.createElement("div");
+      entry.className = `log-entry ${type}`;
+      
+      const timeSpan = document.createElement("span");
+      timeSpan.className = "log-time";
+      timeSpan.textContent = new Date().toLocaleTimeString();
+      
+      const dirSpan = document.createElement("span");
+      dirSpan.className = `log-direction ${direction}`;
+      dirSpan.textContent = label;
+
+      const payloadDiv = document.createElement("div");
+      payloadDiv.className = "log-payload";
+      payloadDiv.textContent = typeof payload === "object" ? JSON.stringify(payload, null, 2) : payload;
+
+      entry.appendChild(timeSpan);
+      entry.appendChild(dirSpan);
+      entry.appendChild(payloadDiv);
+      logPanel.appendChild(entry);
+      
+      // Auto scroll
+      logPanel.scrollTop = logPanel.scrollHeight;
+    }
+
+    // Step 1: Login & Register
+    btnLogin.addEventListener("click", async () => {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      
+      log("info", "info", "HTTP", `Gửi yêu cầu đăng nhập: ${email}...`);
+      try {
+        const res = await fetch("http://localhost:4000/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (res.status !== 200) throw new Error(data.message || "Đăng nhập thất bại");
+        
+        accessToken = data.accessToken;
+        userId = data.user.id;
+        userName = data.user.name;
+        tokenTextarea.value = accessToken;
+        log("received", "received", "HTTP 200", data);
+        log("info", "info", "System", "✓ Lấy Token thành công! Bạn có thể chuyển sang Bước 2.");
+      } catch (err) {
+        log("error", "error", "HTTP ERROR", err.message);
+      }
+    });
+
+    btnRegister.addEventListener("click", async () => {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      const name = "Test User " + Math.floor(Math.random() * 1000);
+      
+      log("info", "info", "HTTP", `Gửi yêu cầu đăng ký tài khoản: ${email}...`);
+      try {
+        const res = await fetch("http://localhost:4000/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password })
+        });
+        const data = await res.json();
+        if (res.status !== 201) throw new Error(data.message || "Đăng ký thất bại");
+        
+        log("received", "received", "HTTP 201", data);
+        log("info", "info", "System", "✓ Đăng ký tài khoản thành công! Vui lòng nhấn Đăng nhập.");
+      } catch (err) {
+        log("error", "error", "HTTP ERROR", err.message);
+      }
+    });
+
+    // Step 2: Socket.IO Connection
+    btnConnect.addEventListener("click", () => {
+      if (!accessToken) {
+        alert("Vui lòng thực hiện Bước 1: Đăng nhập trước!");
+        return;
+      }
+
+      const socketUrl = socketUrlInput.value;
+      log("info", "info", "Socket.IO", `Kết nối đến ${socketUrl} bằng Token...`);
+      
+      socket = io(socketUrl, {
+        auth: { token: accessToken }
+      });
+
+      socket.on("connect", () => {
+        connectionStatus.textContent = "Đã kết nối";
+        connectionStatus.className = "badge badge-connected";
+        btnConnect.disabled = true;
+        btnDisconnect.disabled = false;
+        btnJoin.disabled = false;
+        btnSimulateOffline.disabled = false;
+        log("received", "received", "CONNECT", `Đã thiết lập socket session ID: ${socket.id}`);
+      });
+
+      socket.on("connect_error", (err) => {
+        log("error", "error", "CONNECT_ERROR", err.message);
+      });
+
+      socket.on("disconnect", (reason) => {
+        connectionStatus.textContent = "Chưa kết nối";
+        connectionStatus.className = "badge badge-disconnected";
+        btnConnect.disabled = false;
+        btnDisconnect.disabled = true;
+        btnJoin.disabled = true;
+        btnLeave.disabled = true;
+        btnSimulateOffline.disabled = true;
+        btnReconnectSync.disabled = true;
+        btnSendUpdate.disabled = true;
+        btnUndo.disabled = true;
+        btnRedo.disabled = true;
+        log("error", "error", "DISCONNECT", `Lý do: ${reason}`);
+      });
+
+      // Socket logic: Listeners for Đạt's sync logic
+      socket.on("user-list", ({ documentId, users }) => {
+        log("received", "received", "user-list", { documentId, users });
+        onlineUsersDiv.innerHTML = "";
+        users.forEach(u => {
+          const pill = document.createElement("span");
+          pill.className = "user-pill";
+          
+          const dot = document.createElement("span");
+          dot.className = "user-dot";
+          dot.style.backgroundColor = u.color;
+          
+          const nameSpan = document.createElement("span");
+          nameSpan.textContent = `${u.name} (${u.role})`;
+          
+          pill.appendChild(dot);
+          pill.appendChild(nameSpan);
+          onlineUsersDiv.appendChild(pill);
+        });
+      });
+
+      socket.on("yjs-update", ({ documentId, userId: senderId, update, clientId }) => {
+        if (clientId === "client_testbench_" + socket.id) return;
+        log("received", "received", "yjs-update", `Nhận Yjs update từ User ${senderId}, Client ${clientId}`);
+        // Apply update to local Y.Doc
+        Y.applyUpdate(ydoc, new Uint8Array(update));
+      });
+
+      socket.on("sync-state-response", ({ documentId, update }) => {
+        log("received", "received", "sync-state-response", `Nhận phản hồi so khớp trạng thái Yjs.`);
+        if (update) {
+          Y.applyUpdate(ydoc, new Uint8Array(update));
+          log("info", "info", "Yjs Merge", "✓ Hợp nhất các gói update offline thành công!");
+        } else {
+          log("info", "info", "Yjs Merge", "Không có thay đổi nào cần đồng bộ thêm.");
+        }
+      });
+
+      socket.on("cursor-update", ({ userId: senderId, cursor }) => {
+        // Draw remote cursors inside canvas simulator
+        if (senderId === userId) return;
+        let cursorEl = document.getElementById(`remote-cursor-${senderId}`);
+        if (!cursorEl) {
+          cursorEl = document.createElement("div");
+          cursorEl.id = `remote-cursor-${senderId}`;
+          cursorEl.className = "tracker-cursor";
+          cursorEl.style.backgroundColor = "#10b981";
+          
+          const labelEl = document.createElement("div");
+          labelEl.className = "tracker-label";
+          labelEl.textContent = `User ${senderId}`;
+          cursorEl.appendChild(labelEl);
+          
+          trackerCanvas.appendChild(cursorEl);
+        }
+        cursorEl.style.left = `${cursor.x}px`;
+        cursorEl.style.top = `${cursor.y}px`;
+      });
+
+      socket.on("access-denied", ({ documentId, message }) => {
+        log("error", "error", "ACCESS-DENIED", { documentId, message });
+        alert(`Bị từ chối quyền: ${message}`);
+      });
+    });
+
+    btnDisconnect.addEventListener("click", () => {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+    });
+
+    // Step 2.5: Join Room
+    btnJoin.addEventListener("click", () => {
+      currentDocId = Number(docIdInput.value);
+      log("sent", "sent", "join-document", { documentId: currentDocId, user: { name: userName } });
+      
+      socket.emit("join-document", {
+        documentId: currentDocId,
+        user: { name: userName, color: "#3b82f6" }
+      });
+
+      btnJoin.disabled = true;
+      btnLeave.disabled = false;
+      btnSendUpdate.disabled = false;
+      btnUndo.disabled = false;
+      btnRedo.disabled = false;
+      editorTextarea.disabled = false;
+    });
+
+    btnLeave.addEventListener("click", () => {
+      log("sent", "sent", "leave-document", { documentId: currentDocId });
+      socket.emit("leave-document", { documentId: currentDocId });
+      
+      btnJoin.disabled = false;
+      btnLeave.disabled = true;
+      btnSendUpdate.disabled = true;
+      btnUndo.disabled = true;
+      btnRedo.disabled = true;
+      editorTextarea.disabled = true;
+      onlineUsersDiv.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Chưa vào phòng tài liệu...</span>';
+    });
+
+    // Step 3: Yjs Collaborative updates
+    btnSendUpdate.addEventListener("click", () => {
+      // Simulate typing text
+      const charCode = 65 + Math.floor(Math.random() * 26); // A-Z
+      const text = String.fromCharCode(charCode);
+      
+      // Update local Yjs text - Yjs observes this and fires event
+      ytext.insert(ytext.length, text);
+      
+      // Capture the state difference / update package
+      const update = Y.encodeStateAsUpdate(ydoc);
+      
+      log("sent", "sent", "yjs-update", `Gửi Yjs update: "${text}"`);
+      socket.emit("yjs-update", {
+        documentId: currentDocId,
+        userId: userId,
+        update: Array.from(update),
+        clientId: "client_testbench_" + socket.id
+      });
+    });
+
+    // Undo / Redo Click Handlers
+    btnUndo.addEventListener("click", () => {
+      if (undoManager.canUndo()) {
+        log("info", "info", "Undo", "Thực hiện Local Undo");
+        undoManager.undo();
+        const update = Y.encodeStateAsUpdate(ydoc);
+        socket.emit("yjs-update", {
+          documentId: currentDocId,
+          userId: userId,
+          update: Array.from(update),
+          clientId: "client_testbench_" + socket.id
+        });
+      } else {
+        log("info", "info", "Undo", "Không thể Undo thêm.");
+      }
+    });
+
+    btnRedo.addEventListener("click", () => {
+      if (undoManager.canRedo()) {
+        log("info", "info", "Redo", "Thực hiện Local Redo");
+        undoManager.redo();
+        const update = Y.encodeStateAsUpdate(ydoc);
+        socket.emit("yjs-update", {
+          documentId: currentDocId,
+          userId: userId,
+          update: Array.from(update),
+          clientId: "client_testbench_" + socket.id
+        });
+      } else {
+        log("info", "info", "Redo", "Không thể Redo thêm.");
+      }
+    });
+
+    // Step 4: Cursor Tracker
+    trackerCanvas.addEventListener("mousemove", (e) => {
+      if (!socket || !currentDocId || btnJoin.disabled === false) return;
+      
+      const rect = trackerCanvas.getBoundingClientRect();
+      const x = Math.round(e.clientX - rect.left);
+      const y = Math.round(e.clientY - rect.top);
+      
+      // Throttle mouse coordinates emissions slightly
+      if (Math.random() < 0.15) {
+        socket.emit("cursor-update", {
+          documentId: currentDocId,
+          userId: userId,
+          cursor: { x, y }
+        });
+      }
+    });
+
+    // Step 5: Offline Sync Simulator
+    btnSimulateOffline.addEventListener("click", () => {
+      log("info", "info", "System", "🔴 Đang tắt mạng (Simulate Offline)...");
+      socket.disconnect(); // This triggers socket offline
+      
+      btnSimulateOffline.disabled = true;
+      btnReconnectSync.disabled = false;
+      btnSendUpdate.disabled = true;
+      
+      connectionStatus.textContent = "Offline (Mô phỏng)";
+      connectionStatus.className = "badge badge-offline";
+    });
+
+    btnReconnectSync.addEventListener("click", () => {
+      log("info", "info", "System", "🟢 Đang kết nối lại mạng (Reconnect) & Đồng bộ Vector...");
+      
+      // Re-connect
+      socket.connect();
+      
+      socket.once("connect", () => {
+        // Automatically join back to room
+        socket.emit("join-document", {
+          documentId: currentDocId,
+          user: { name: userName, color: "#3b82f6" }
+        });
+        
+        // Step Yjs Offline Reconnect: Calculate State Vector of local Y.Doc
+        const stateVector = Y.encodeStateVector(ydoc);
+        
+        log("sent", "sent", "sync-state-request", { documentId: currentDocId });
+        socket.emit("sync-state-request", {
+          documentId: currentDocId,
+          stateVector: Array.from(stateVector)
+        });
+
+        btnSimulateOffline.disabled = false;
+        btnReconnectSync.disabled = true;
+        btnSendUpdate.disabled = false;
+      });
+    });
+
+    // Clear logs
+    btnClearLog.addEventListener("click", () => {
+      logPanel.innerHTML = "";
+    });
+
+  </script>
+</body>
+</html>

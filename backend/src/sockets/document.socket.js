@@ -126,13 +126,23 @@ export function registerDocumentSocket(io) {
           clientId
         });
 
+        console.log(`[yjs-update] Received Yjs update from userId: ${socket.data.user.id}, socket: ${socket.id} for documentId: ${documentId}`);
+        const roomName = getRoom(documentId);
+        const activeSockets = await io.in(roomName).fetchSockets();
+        console.log(`[yjs-update] Active sockets in room "${roomName}":`, activeSockets.map(s => ({
+          socketId: s.id,
+          userId: s.data?.user?.id,
+          name: s.data?.user?.name
+        })));
+
         // Broadcast Yjs update to other collaborators in the room
-        socket.to(getRoom(documentId)).emit("yjs-update", {
+        io.to(roomName).emit("yjs-update", {
           documentId,
           userId,
           update,
           clientId
         });
+        console.log(`[yjs-update] Broadcasted to room "${roomName}" from socket: ${socket.id}`);
       } catch (error) {
         console.error("Error handling Yjs update:", error);
       }

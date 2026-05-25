@@ -258,10 +258,18 @@ export class DocumentRepository {
 
     const ydoc = new Y.Doc();
     if (document?.ydocState) {
-      Y.applyUpdate(ydoc, new Uint8Array(document.ydocState));
+      try {
+        Y.applyUpdate(ydoc, new Uint8Array(document.ydocState));
+      } catch (err) {
+        console.warn(`[Yjs Merge Warning] Failed to apply old ydocState for document ${documentId}:`, err.message);
+      }
     }
 
-    Y.applyUpdate(ydoc, new Uint8Array(updateBuffer));
+    try {
+      Y.applyUpdate(ydoc, new Uint8Array(updateBuffer));
+    } catch (err) {
+      console.error(`[Yjs Merge Error] Failed to apply new update for document ${documentId}:`, err.message);
+    }
     const mergedState = Y.encodeStateAsUpdate(ydoc);
 
     await Document.update(
