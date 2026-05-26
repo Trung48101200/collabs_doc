@@ -179,27 +179,17 @@ export class DocumentRepository {
   }
 
   async getRole(documentId, userId) {
-    console.log(`[DocumentRepository.getRole] Checking role for documentId: ${documentId} (type: ${typeof documentId}), userId: ${userId} (type: ${typeof userId})`);
     const document = await Document.findByPk(documentId, {
       attributes: ["ownerId"]
     });
     
-    if (document) {
-      console.log(`[DocumentRepository.getRole] Document found, ownerId: ${document.ownerId} (type: ${typeof document.ownerId})`);
-    } else {
-      console.log(`[DocumentRepository.getRole] Document NOT found for ID: ${documentId}`);
-    }
-
     if (document && Number(document.ownerId) === Number(userId)) {
-      console.log(`[DocumentRepository.getRole] User is owner`);
       return "owner";
     }
 
     const collaborator = await DocumentCollaborator.findOne({
       where: { documentId, userId }
     });
-
-    console.log(`[DocumentRepository.getRole] Collaborator found:`, collaborator ? `Yes (role=${collaborator.role})` : "No");
 
     if (collaborator) return collaborator.role;
     return null;
