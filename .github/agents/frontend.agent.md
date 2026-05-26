@@ -2,49 +2,34 @@
 
 ## Stack
 - React
+- Vite
+- TypeScript
 - TipTap
 - Yjs
+- Socket.IO client
 
 ## Mô tả frontend
-Frontend chịu trách nhiệm giao diện, editor UI, đồng bộ trạng thái với Yjs, và gọi API qua service.
+Frontend chịu trách nhiệm giao diện người dùng, điều khiển editor, Yjs collaboration, và gọi API qua service.
 
-## Cấu trúc
-- `components/`
-  - Chứa các UI component tái sử dụng, layout, controls, modals và loading skeleton.
-- `editor/`
-  - Chứa các module liên quan tới TipTap.
-  - Ví dụ: `Toolbar`, `EditorWrapper`, `CollaborationProvider`.
-  - Nơi xử lý cấu hình TipTap, commands và tích hợp Yjs.
-- `hooks/`
-  - Chứa custom hooks để quản lý state, data fetching, editor state và socket status.
-- `services/`
-  - Chứa các API call và helper logic.
-  - Component không fetch trực tiếp mà gọi service.
+## Cấu trúc chính
+- `src/pages/`: các trang chính của ứng dụng
+  - `LoginPage`, `DocumentsPage`, `DocumentDetailPage`, `EditorPage`
+- `src/hooks/`: custom hooks để fetch data, quản lý session, đồng bộ editor và socket
+- `src/services/`: gọi API và xử lý logic request
+- `src/editor/`: TipTap editor, collaboration provider và UI editor components
+- `src/socket/`: Socket.IO client và event handlers
+- `src/utils/`: helper Yjs encoding, serializer
 
-## editor/
-- `Toolbar`
-  - Các nút điều khiển editor như bold, italic, heading, list.
-- `EditorWrapper`
-  - Chứa TipTap editor và kết nối với state/commands.
-- `CollaborationProvider`
-  - Khởi tạo Yjs, socket và cung cấp context cho editor.
+## Quy tắc frontend
+- Không fetch API trực tiếp trong component UI.
+- Gọi API từ `services/` hoặc `hooks/`.
+- Tách socket logic ra `src/socket/` và `src/hooks/useDocumentSocket.ts`.
+- Tách editor cấu hình TipTap trong `src/editor/`.
+- Sử dụng context hoặc custom hook để tránh prop drilling.
+- UI component nên tập trung vào render và event callbacks.
 
-## Quy tắc
-- Không fetch API trực tiếp trong component.
-- Gọi API qua service.
-- Socket logic tách riêng, không để trong UI component.
-- Editor logic nằm trong module `editor/`.
-- TipTap chỉ render UI và phản chiếu nội dung.
-- Trạng thái editor dùng hook riêng.
-- Luôn có loading skeleton khi chờ dữ liệu hoặc kết nối.
-- Tránh prop drilling; dùng context hoặc hook để truyền state.
-
-## Cách dùng TipTap
-- `editor.getJSON()`
-  - Lấy cấu trúc document ở dạng JSON.
-- `editor.getHTML()`
-  - Lấy nội dung document ở dạng HTML.
-- `editor.getText()`
-  - Lấy phần văn bản thuần.
-- `editor.commands.setContent()`
-  - Gán nội dung mới vào editor, dùng khi load tài liệu hoặc phục hồi phiên bản.
+## Collaboration
+- `frontend/src/editor/CollaborationProvider.tsx` khởi tạo Yjs và socket context.
+- `frontend/src/hooks/useDocumentSocket.ts` xử lý kết nối socket, awareness, và sync.
+- `frontend/src/utils/yjsEncoding.ts` dùng để mã hóa/giải mã Yjs updates và state.
+- `frontend/src/editor/RichTextEditor.tsx` cấu hình TipTap với extensions và collaboration.

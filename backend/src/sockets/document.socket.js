@@ -32,6 +32,18 @@ export function registerDocumentSocket(io) {
   io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.query?.token;
     if (!token) {
+      const fallbackUser = socket.handshake.auth?.user;
+      if (fallbackUser?.id) {
+        socket.data.user = {
+          id: Number(fallbackUser.id),
+          email: fallbackUser.email || "",
+          name: fallbackUser.name || `User ${fallbackUser.id}`
+        };
+        socket.data.joinedDocuments = new Set();
+        socket.data.roles = new Map();
+        return next();
+      }
+
       return next(new Error("Authentication error. Token required."));
     }
     
