@@ -1,4 +1,4 @@
-import type { DocumentModel, User } from "../types";
+import type { DocumentModel, DocumentVersion, User } from "../types";
 import { apiFetch } from "./api";
 import {
   createMockDocument,
@@ -42,9 +42,38 @@ export function saveDocument(id: number, payload: Partial<DocumentModel> & { ydo
   }, user);
 }
 
-export function createVersion(id: number, user: User): Promise<void> {
-  return apiFetch<void>(`/api/documents/${id}/versions`, {
+export function createVersion(id: number, user: User): Promise<DocumentVersion> {
+  return apiFetch<DocumentVersion>(`/api/documents/${id}/versions`, {
     method: "POST",
     body: JSON.stringify({})
+  }, user);
+}
+
+export function listVersions(id: number, user: User): Promise<DocumentVersion[]> {
+  return apiFetch<DocumentVersion[]>(`/api/documents/${id}/versions`, {}, user);
+}
+
+export function getVersionDetail(id: number, versionId: number, user: User): Promise<DocumentVersion> {
+  return apiFetch<DocumentVersion>(`/api/documents/${id}/versions/${versionId}`, {}, user);
+}
+
+export async function restoreVersion(id: number, versionId: number, user: User): Promise<DocumentModel> {
+  const result = await apiFetch<{ message: string; document: DocumentModel }>(`/api/documents/${id}/versions/${versionId}/restore`, {
+    method: "POST",
+    body: JSON.stringify({})
+  }, user);
+  return result.document;
+}
+
+export function deleteDocument(id: number, user: User): Promise<void> {
+  return apiFetch<void>(`/api/documents/${id}`, {
+    method: "DELETE"
+  }, user);
+}
+
+export function copyDocument(id: number, user: User, title?: string): Promise<DocumentModel> {
+  return apiFetch<DocumentModel>(`/api/documents/${id}/copy`, {
+    method: "POST",
+    body: JSON.stringify({ title })
   }, user);
 }

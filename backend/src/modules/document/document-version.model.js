@@ -36,6 +36,22 @@ DocumentVersion.init(
       type: DataTypes.BLOB("long"),
       field: "ydoc_snapshot"
     },
+    changeSetKey: {
+      type: DataTypes.STRING(160),
+      field: "change_set_key"
+    },
+    fromUpdateId: {
+      type: DataTypes.BIGINT,
+      field: "from_update_id"
+    },
+    toUpdateId: {
+      type: DataTypes.BIGINT,
+      field: "to_update_id"
+    },
+    updateCount: {
+      type: DataTypes.INTEGER,
+      field: "update_count"
+    },
     createdBy: {
       type: DataTypes.BIGINT,
       field: "created_by"

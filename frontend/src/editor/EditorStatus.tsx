@@ -5,7 +5,7 @@ export function EditorStatus({ connectionState, collaboratorLabel }: { connectio
   const isOffline = connectionState === "offline";
   
   return (
-    <div className="panel row" style={{ justifyContent: "space-between" }}>
+    <div className="panel row editor-status" style={{ justifyContent: "space-between" }}>
       <div>
         <p className="muted">Kết nối: <span className={color}>{label}</span></p>
         {isOffline ? (

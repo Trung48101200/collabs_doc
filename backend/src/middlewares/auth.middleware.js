@@ -25,6 +25,11 @@ export async function authMiddleware(req, _res, next) {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "admin-collab-docs-super-secret-key-2026");
+    const fallbackUserId = Number(req.header("x-user-id") || 0);
+    if (fallbackUserId > 0 && fallbackUserId !== Number(decoded.id)) {
+      return next(httpError(401, "Session user mismatch. Please sign in again."));
+    }
+
     req.user = {
       id: Number(decoded.id),
       email: decoded.email,

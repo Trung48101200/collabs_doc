@@ -7,6 +7,8 @@ export const SocketEvents = {
   SelectionUpdate: "selection-update",
   SaveDocument: "save-document",
   CreateVersion: "create-version",
-  ReconnectSync: "reconnect-sync",
+  SyncStateRequest: "sync-state-request",
+  SyncStateResponse: "sync-state-response",
+  VersionRestored: "version-restored",
   UserList: "user-list"
 } as const;

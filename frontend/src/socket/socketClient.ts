@@ -20,6 +20,6 @@ export function createSocketClient() {
   return io(SOCKET_URL, {
     autoConnect: true,
     transports: ["websocket", "polling"],
-    auth: savedUser ? { user: savedUser } : undefined
+    auth: savedUser?.token ? { token: savedUser.token } : undefined
   });
 }

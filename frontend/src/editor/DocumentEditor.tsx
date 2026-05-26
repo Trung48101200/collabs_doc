@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import * as Y from "yjs";
 import { CollaborationProvider, useCollaboration } from "./CollaborationProvider";
 import { EditorToolbar } from "./EditorToolbar";
 import { RichTextEditor } from "./RichTextEditor";
-import { EditorStatus } from "./EditorStatus";
 import { VersionPanel } from "./VersionPanel";
 import { EditorPermissionGuard } from "./EditorPermissionGuard";
 import { CursorLayer } from "./CursorLayer";
@@ -16,14 +15,21 @@ import { encodeStateAsBase64 } from "../utils/yjsEncoding";
 import type { DocumentModel, User } from "../types";
 import type { Editor } from "@tiptap/react";
 
-function DocumentEditorContent({ documentData, user }: { documentData: DocumentModel; user: User }) {
+interface DocumentEditorProps {
+  documentData: DocumentModel;
+  user: User;
+  isVersionOpen: boolean;
+  onCloseVersions: () => void;
+}
+
+function DocumentEditorContent({ documentData, user, isVersionOpen, onCloseVersions }: DocumentEditorProps) {
   const [editor, setEditor] = useState<Editor | null>(null);
   const collaboration = useCollaboration();
-  const { ydoc, awareness, connectionState, onlineUsers, sendSaveRequest, sendVersionRequest } = collaboration;
+  const { ydoc, awareness, onlineUsers, sendSaveRequest, sendSyncRequest } = collaboration;
   const { canEdit, showToolbar } = usePermission(documentData.role);
   const collaborators = useCollaborators(onlineUsers, user.id);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!editor) return;
     await saveDocument(documentData.id, {
       title: documentData.title,
@@ -33,36 +39,59 @@ function DocumentEditorContent({ documentData, user }: { documentData: DocumentM
       ydocState: encodeStateAsBase64(ydoc)
     }, user);
     sendSaveRequest();
-  };
+  }, [documentData.id, documentData.title, editor, sendSaveRequest, user, ydoc]);
 
   useEditorSync(editor, ydoc, canEdit);
   useAutosave({ editor, ydoc, intervalMs: 8000, onSave: handleSave });
 
-  const collaboratorsLabel = collaborators.peers.length
-    ? `${collaborators.peers.map((item) => item.name).join(", ")} đang hoạt động`
-    : "Không có bạn cùng chỉnh sửa";
+  useEffect(() => {
+    const handleSaveShortcut = (event: KeyboardEvent) => {
+      const hasCommandModifier = event.ctrlKey || event.metaKey;
+      if (hasCommandModifier && !event.altKey && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        handleSave();
+      }
+    };
+
+    window.addEventListener("keydown", handleSaveShortcut, true);
+
+    return () => {
+      window.removeEventListener("keydown", handleSaveShortcut, true);
+    };
+  }, [handleSave]);
 
   return (
     <div className="editor-layout">
-      <EditorStatus connectionState={connectionState} collaboratorLabel={collaboratorsLabel} />
       {showToolbar ? <EditorToolbar editor={editor} disabled={!canEdit} /> : null}
       <CursorLayer collaborators={collaborators.peers} />
       <EditorPermissionGuard role={documentData.role}>
         <RichTextEditor documentData={documentData} ydoc={ydoc} awareness={awareness} user={user} editable={canEdit} onEditorReady={setEditor} />
       </EditorPermissionGuard>
-      <VersionPanel onCreateVersion={async () => {
-        await handleSave();
-        sendVersionRequest();
-      }} />
+      <VersionPanel
+        documentId={documentData.id}
+        user={user}
+        canEdit={canEdit}
+        isOpen={isVersionOpen}
+        onClose={onCloseVersions}
+        onBeforeCreateVersion={handleSave}
+        onRestored={async () => {
+          sendSyncRequest();
+        }}
+      />
     </div>
   );
 }
 
-export function DocumentEditor({ documentData, user }: { documentData: DocumentModel; user: User }) {
+export function DocumentEditor({ documentData, user, isVersionOpen, onCloseVersions }: DocumentEditorProps) {
   const initialState = useMemo(() => ({ documentData, user }), [documentData, user]);
   return (
     <CollaborationProvider documentId={documentData.id} user={user} role={documentData.role}>
-      <DocumentEditorContent documentData={initialState.documentData} user={initialState.user} />
+      <DocumentEditorContent
+        documentData={initialState.documentData}
+        user={initialState.user}
+        isVersionOpen={isVersionOpen}
+        onCloseVersions={onCloseVersions}
+      />
     </CollaborationProvider>
   );
 }

@@ -54,6 +54,11 @@ async function runMigration() {
       }
     }
 
+    await ensureColumn(connection, "document_versions", "change_set_key", "VARCHAR(160)");
+    await ensureColumn(connection, "document_versions", "from_update_id", "BIGINT");
+    await ensureColumn(connection, "document_versions", "to_update_id", "BIGINT");
+    await ensureColumn(connection, "document_versions", "update_count", "INT DEFAULT 0");
+
     console.log("Database migration completed successfully!");
   } catch (error) {
     console.error("Migration failed:", error);
@@ -61,6 +66,16 @@ async function runMigration() {
   } finally {
     await connection.end();
   }
+}
+
+async function ensureColumn(connection, tableName, columnName, definition) {
+  const [columns] = await connection.query(
+    `SHOW COLUMNS FROM ${tableName} LIKE ?`,
+    [columnName]
+  );
+
+  if (columns.length > 0) return;
+  await connection.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition};`);
 }
 
 // Run if called directly

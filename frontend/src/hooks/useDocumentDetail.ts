@@ -6,6 +6,7 @@ interface UseDocumentDetailResult {
   document: DocumentModel | null;
   loading: boolean;
   error: string | null;
+  refresh: () => Promise<void>;
 }
 
 export function useDocumentDetail(documentId: number, user: User): UseDocumentDetailResult {
@@ -13,33 +14,30 @@ export function useDocumentDetail(documentId: number, user: User): UseDocumentDe
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  async function load() {
+    setLoading(true);
+    try {
+      const result = await getDocument(documentId, user);
+      setDocument(result);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load document");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      try {
-        const result = await getDocument(documentId, user);
-        if (!cancelled) {
-          setDocument(result);
-          setError(null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Unable to load document");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+    load().catch(() => {
+      if (!cancelled) {
+        setError("Unable to load document");
       }
-    }
-
-    load();
+    });
     return () => {
       cancelled = true;
     };
   }, [documentId, user]);
 
-  return { document, loading, error };
+  return { document, loading, error, refresh: load };
 }

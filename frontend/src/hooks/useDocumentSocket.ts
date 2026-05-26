@@ -8,6 +8,7 @@ import { registerDocumentSocketHandlers } from "../socket/socketHandlers";
 import {
   applyAwarenessUpdateBytes,
   applyUpdateArray,
+  decodeBase64ToUint8Array,
   encodeAwarenessUpdate,
   encodeStateAsBase64
 } from "../utils/yjsEncoding";
@@ -20,7 +21,7 @@ interface UseDocumentSocketResult {
   onlineUsers: User[];
   sendSaveRequest: () => void;
   sendVersionRequest: () => void;
-  sendReconnectSync: () => void;
+  sendSyncRequest: () => void;
 }
 
 const useMocks = import.meta.env.VITE_USE_MOCKS === "true";
@@ -34,11 +35,19 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
   const awareness = useMemo(() => new Awareness(ydoc), [ydoc]);
   const socket = useMemo(() => createSocketClient(), [documentId]);
 
+  // Handle destruction separately to avoid destroying active instances on socket error re-runs
+  useEffect(() => {
+    return () => {
+      ydoc.destroy();
+      awareness.destroy();
+      socket.disconnect();
+    };
+  }, [ydoc, awareness, socket]);
+
   useEffect(() => {
     const persistence = new IndexeddbPersistence(`document-${documentId}`, ydoc);
 
     if (useMocks || socketError) {
-      // In mock mode or socket error, just use local Yjs + IndexedDB without socket
       awareness.setLocalStateField("user", {
         id: user.id,
         name: user.name,
@@ -46,7 +55,6 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
       });
       return () => {
         persistence.destroy();
-        ydoc.destroy();
       };
     }
 
@@ -56,10 +64,11 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
           setConnectionState("online");
           setSocketError(false);
           socket.emit(SocketEvents.JoinDocument, { documentId, user });
-          socket.emit(SocketEvents.ReconnectSync, {
+          
+          const stateVector = Y.encodeStateVector(ydoc);
+          socket.emit(SocketEvents.SyncStateRequest, {
             documentId,
-            ydocState: encodeStateAsBase64(ydoc),
-            clientId: socket.id
+            stateVector: Array.from(stateVector)
           });
         },
         onDisconnect: () => {
@@ -69,16 +78,30 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
           setOnlineUsers(users);
         },
         onRemoteUpdate: (update) => {
-          applyUpdateArray(ydoc, Array.from(update));
+          Y.applyUpdate(ydoc, update, "remote");
         },
         onAwarenessUpdate: (update) => {
           applyAwarenessUpdateBytes(awareness, Array.from(update));
+        },
+        onSyncStateResponse: (update) => {
+          if (update) {
+            Y.applyUpdate(ydoc, update, "remote");
+          }
+        },
+        onVersionRestored: (ydocState) => {
+          if (ydocState) {
+            const update = decodeBase64ToUint8Array(ydocState);
+            Y.applyUpdate(ydoc, update, "remote");
+          }
         }
       });
 
-      // Error handlers
       const handleConnectError = (error: any) => {
         console.error("Socket connection error:", error);
+        if (String(error?.message || "").toLowerCase().includes("authentication error")) {
+          localStorage.removeItem("collab-doc-user");
+          window.dispatchEvent(new Event("collab-doc-session-expired"));
+        }
         setSocketError(true);
         setConnectionState("offline");
       };
@@ -115,16 +138,16 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
         color: user.color
       });
 
-      const awarenessListener = ({ added, updated, removed }: { added: number[]; updated: number[]; removed: number[] }) => {
+      const awarenessListener = ({ added, updated, removed }: any, origin: any) => {
+        if (origin === "remote") return;
         const changedClients = [...added, ...updated, ...removed];
         if (changedClients.length === 0) return;
-        const update = encodeAwarenessUpdate(awareness, changedClients);
+        const awarenessUpdate = encodeAwarenessUpdate(awareness, changedClients);
 
         try {
           socket.emit(SocketEvents.AwarenessUpdate, {
             documentId,
-            update,
-            clientId: socket.id
+            awareness: awarenessUpdate
           });
         } catch (err) {
           console.error("Failed to emit awareness update:", err);
@@ -140,9 +163,7 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
         ydoc.off("update", handleLocalUpdate);
         awareness.off("update", awarenessListener);
         cleanupSocket();
-        socket.disconnect();
         persistence.destroy();
-        ydoc.destroy();
       };
     } catch (err) {
       console.error("Socket initialization error:", err);
@@ -150,7 +171,6 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
       setConnectionState("offline");
       return () => {
         persistence.destroy();
-        ydoc.destroy();
       };
     }
   }, [documentId, socket, user, ydoc, awareness, role, socketError]);
@@ -173,26 +193,26 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
     }
   }, [documentId, socket, user.id, socketError]);
 
-  const sendReconnectSync = useCallback(() => {
+  const sendSyncRequest = useCallback(() => {
     if (useMocks || socketError || !socket.connected) return;
     try {
-      socket.emit(SocketEvents.ReconnectSync, {
+      const stateVector = Y.encodeStateVector(ydoc);
+      socket.emit(SocketEvents.SyncStateRequest, {
         documentId,
-        ydocState: encodeStateAsBase64(ydoc),
-        clientId: socket.id
+        stateVector: Array.from(stateVector)
       });
     } catch (err) {
-      console.error("Failed to send reconnect sync:", err);
+      console.error("Failed to send sync request:", err);
     }
   }, [documentId, socket, ydoc, socketError]);
 
-  return {
+  return useMemo(() => ({
     ydoc,
     awareness,
     connectionState,
     onlineUsers,
     sendSaveRequest,
     sendVersionRequest,
-    sendReconnectSync
-  };
+    sendSyncRequest
+  }), [ydoc, awareness, connectionState, onlineUsers, sendSaveRequest, sendVersionRequest, sendSyncRequest]);
 }

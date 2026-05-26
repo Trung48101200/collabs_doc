@@ -3,8 +3,25 @@ import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate as encodeAwarene
 
 export function encodeStateAsBase64(ydoc: Y.Doc) {
   const update = Y.encodeStateAsUpdate(ydoc);
-  const bytes = Array.from(update);
-  return btoa(String.fromCharCode(...bytes));
+  return uint8ArrayToBase64(update);
+}
+
+function uint8ArrayToBase64(array: Uint8Array) {
+  let binary = "";
+  const len = array.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(array[i]);
+  }
+  return btoa(binary);
+}
+
+export function decodeBase64ToUint8Array(base64: string) {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
 }
 
 export function applyUpdateArray(ydoc: Y.Doc, update: number[]) {

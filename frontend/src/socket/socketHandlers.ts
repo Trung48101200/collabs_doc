@@ -12,6 +12,8 @@ export interface DocumentSocketHandlers {
   onUserList?: (users: User[]) => void;
   onRemoteUpdate?: (update: Uint8Array) => void;
   onAwarenessUpdate?: (update: Uint8Array) => void;
+  onSyncStateResponse?: (update: Uint8Array) => void;
+  onVersionRestored?: (ydocState: string) => void;
 }
 
 export function registerDocumentSocketHandlers(
@@ -26,8 +28,15 @@ export function registerDocumentSocketHandlers(
   socket.on(SocketEvents.YjsUpdate, ({ update }) => {
     if (update) handlers.onRemoteUpdate?.(Uint8Array.from(update));
   });
-  socket.on(SocketEvents.AwarenessUpdate, ({ update }) => {
-    if (update) handlers.onAwarenessUpdate?.(Uint8Array.from(update));
+  socket.on(SocketEvents.AwarenessUpdate, (awarenessData) => {
+    // If backend sends awareness object directly
+    if (awarenessData) handlers.onAwarenessUpdate?.(Uint8Array.from(awarenessData));
+  });
+  socket.on(SocketEvents.SyncStateResponse, ({ update }) => {
+    if (update) handlers.onSyncStateResponse?.(Uint8Array.from(update));
+  });
+  socket.on(SocketEvents.VersionRestored, ({ ydocState }) => {
+    if (ydocState) handlers.onVersionRestored?.(ydocState);
   });
 
   return () => {
@@ -36,5 +45,7 @@ export function registerDocumentSocketHandlers(
     socket.off(SocketEvents.UserList);
     socket.off(SocketEvents.YjsUpdate);
     socket.off(SocketEvents.AwarenessUpdate);
+    socket.off(SocketEvents.SyncStateResponse);
+    socket.off(SocketEvents.VersionRestored);
   };
 }

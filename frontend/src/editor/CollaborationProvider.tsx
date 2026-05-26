@@ -9,7 +9,7 @@ interface CollaborationContextValue {
   onlineUsers: User[];
   sendSaveRequest: () => void;
   sendVersionRequest: () => void;
-  sendReconnectSync: () => void;
+  sendSyncRequest: () => void;
 }
 
 const CollaborationContext = createContext<CollaborationContextValue | undefined>(undefined);

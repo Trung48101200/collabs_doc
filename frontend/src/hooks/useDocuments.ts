@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { DocumentModel, User } from "../types";
-import { createDocument, listDocuments } from "../services/documentApi";
+import { copyDocument, createDocument, deleteDocument, listDocuments } from "../services/documentApi";
 
 interface UseDocumentsResult {
   documents: DocumentModel[];
@@ -8,6 +8,8 @@ interface UseDocumentsResult {
   error: string | null;
   refresh: () => Promise<void>;
   create: (title: string) => Promise<DocumentModel>;
+  remove: (id: number) => Promise<void>;
+  copy: (id: number) => Promise<DocumentModel>;
 }
 
 export function useDocuments(user: User): UseDocumentsResult {
@@ -34,9 +36,20 @@ export function useDocuments(user: User): UseDocumentsResult {
     return document;
   }
 
+  async function remove(id: number) {
+    await deleteDocument(id, user);
+    await loadDocuments();
+  }
+
+  async function copy(id: number) {
+    const document = await copyDocument(id, user);
+    await loadDocuments();
+    return document;
+  }
+
   useEffect(() => {
     loadDocuments();
   }, [user]);
 
-  return { documents, loading, error, refresh: loadDocuments, create };
+  return { documents, loading, error, refresh: loadDocuments, create, remove, copy };
 }

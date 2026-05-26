@@ -1,86 +1,179 @@
+import { ArrowLeft, FileText, HelpCircle, History, Settings, Share2 } from "lucide-react";
+import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { useSession } from "../../hooks/useSession";
-import { useDocumentDetail } from "../../hooks/useDocumentDetail";
+import { ManageAccessModal } from "../../components/ManageAccessModal/ManageAccessModal";
 import { DocumentEditor } from "../../editor/DocumentEditor";
+import { ErrorBoundary } from "../../components/ErrorBoundary";
+import { useDocumentCollaborators } from "../../hooks/useDocumentCollaborators";
+import { useDocumentDetail } from "../../hooks/useDocumentDetail";
+import { useSession } from "../../hooks/useSession";
+import type { Collaborator, DocumentModel, User } from "../../types";
 
-export function EditorPage() {
+function CollaboratorRow({ collaborator, isCurrentUser }: { collaborator: Collaborator; isCurrentUser: boolean }) {
+  const initial = (collaborator.name || "U").charAt(0).toUpperCase();
+  return (
+    <div className={`stitch-collaborator ${isCurrentUser ? "active" : ""}`}>
+      <div className="presence-avatar" style={{ backgroundColor: collaborator.color || "#2563eb" }}>
+        {initial}
+        <span className="presence-dot" />
+      </div>
+      <div>
+        <strong>{collaborator.name || "Unknown"}{isCurrentUser ? " (You)" : ""}</strong>
+        <span>{collaborator.role}</span>
+      </div>
+    </div>
+  );
+}
+
+function EditorLoadedWorkspace({ document, user }: { document: DocumentModel; user: User }) {
   const navigate = useNavigate();
-  const { documentId } = useParams();
-  const { user } = useSession();
-  const numericDocumentId = Number(documentId);
+  const { collaborators, invite, remove, updateRole } = useDocumentCollaborators(document.id, user);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isVersionOpen, setIsVersionOpen] = useState(false);
 
-  if (!documentId || Number.isNaN(numericDocumentId)) {
-    return <Navigate to="/documents" replace />;
-  }
+  const visibleCollaborators = collaborators.length
+    ? collaborators
+    : [{ id: user.id, userId: user.id, name: user.name, email: user.email, role: document.role, color: user.color }];
 
-  const { document, loading, error } = useDocumentDetail(numericDocumentId, user!);
+  return (
+    <div className="stitch-editor-shell">
+      <aside className="stitch-editor-sidebar">
+        <div className="workspace-heading">
+          <div className="stitch-brand-mark">
+            <FileText size={22} />
+          </div>
+          <div>
+            <h2>Workspace</h2>
+            <p>Collaborative Team</p>
+          </div>
+        </div>
+
+        <section className="sidebar-section">
+          <h3>Collaborators</h3>
+          <div className="collaborator-list">
+            {visibleCollaborators.map((collaborator) => (
+              <CollaboratorRow
+                key={`${collaborator.userId}-${collaborator.role}`}
+                collaborator={collaborator}
+                isCurrentUser={collaborator.userId === user.id}
+              />
+            ))}
+          </div>
+        </section>
+
+        <nav className="stitch-side-actions">
+          <button type="button">
+            <Settings size={18} />
+            Settings
+          </button>
+          <button type="button">
+            <HelpCircle size={18} />
+            Help
+          </button>
+        </nav>
+      </aside>
+
+      <main className="stitch-editor-main">
+        <header className="stitch-editor-topbar">
+          <div className="editor-title-row">
+            <button className="stitch-icon-button" type="button" onClick={() => navigate("/documents")} aria-label="Back to documents">
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <h1>{document.title || "Untitled Document"}</h1>
+              <span className="saved-pill">Saved</span>
+            </div>
+          </div>
+
+          <div className="editor-topbar-actions">
+            <div className="stacked-avatars" aria-label="Active collaborators">
+              {visibleCollaborators.slice(0, 3).map((collaborator) => (
+                <div className="small-avatar" style={{ backgroundColor: collaborator.color || "#2563eb" }} key={collaborator.userId}>
+                  {(collaborator.name || "U").charAt(0).toUpperCase()}
+                </div>
+              ))}
+              {visibleCollaborators.length > 3 ? <div className="small-avatar muted">+{visibleCollaborators.length - 3}</div> : null}
+            </div>
+            <button className="stitch-icon-button" type="button" onClick={() => setIsVersionOpen(true)} aria-label="Open version history">
+              <History size={18} />
+            </button>
+            <button className="stitch-primary-button" type="button" onClick={() => setIsShareOpen(true)}>
+              <Share2 size={16} />
+              Share
+            </button>
+          </div>
+        </header>
+
+        <ErrorBoundary fallback={
+          <div style={{ padding: "40px", textAlign: "center" }}>
+            <h2>Editor failed to load.</h2>
+            <p>There was a problem initializing the collaboration system.</p>
+            <button className="stitch-primary-button" onClick={() => window.location.reload()}>Retry</button>
+          </div>
+        }>
+          <DocumentEditor
+            documentData={document}
+            user={user}
+            isVersionOpen={isVersionOpen}
+            onCloseVersions={() => setIsVersionOpen(false)}
+          />
+        </ErrorBoundary>
+      </main>
+
+      <ManageAccessModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        collaborators={visibleCollaborators}
+        canManage={document.role === "owner"}
+        onInvite={invite}
+        onRemove={remove}
+        onChangeRole={updateRole}
+      />
+    </div>
+  );
+}
+
+function EditorWorkspace({ documentId, user }: { documentId: number; user: User }) {
+  const navigate = useNavigate();
+  const { document, loading, error } = useDocumentDetail(documentId, user);
 
   if (loading) {
     return (
-      <main className="app-shell docs-shell">
-        <header className="docs-topbar docs-topbar-edit">
-          <div className="docs-brand">
-            <button className="button secondary" onClick={() => navigate("/documents")}>Quay lại</button>
-            <div>
-              <h1>Đang mở tài liệu</h1>
-              <p className="muted">Vui lòng chờ trong giây lát.</p>
-            </div>
-          </div>
-        </header>
-        <section className="page docs-page">
-          <div className="panel docs-hero">Đang tải tài liệu...</div>
-        </section>
+      <main className="stitch-loading-page">
+        <div className="stitch-brand-mark">
+          <FileText size={22} />
+        </div>
+        <p>Opening your workspace...</p>
       </main>
     );
   }
 
   if (error || !document) {
     return (
-      <main className="app-shell docs-shell">
-        <header className="docs-topbar docs-topbar-edit">
-          <div className="docs-brand">
-            <button className="button secondary" onClick={() => navigate("/documents")}>Quay lại</button>
-            <div>
-              <h1>Lỗi tải tài liệu</h1>
-              <p className="muted">Vui lòng thử lại sau.</p>
-            </div>
-          </div>
-        </header>
-        <section className="page docs-page">
-          <div className="panel docs-error">Lỗi tải tài liệu: {error || "Không tìm thấy"}</div>
-        </section>
+      <main className="stitch-loading-page">
+        <div className="stitch-brand-mark error">
+          <FileText size={22} />
+        </div>
+        <h1>Failed to load editor</h1>
+        <p>{error || "Document not found"}</p>
+        <button className="stitch-primary-button" type="button" onClick={() => navigate("/documents")}>
+          Back to Dashboard
+        </button>
       </main>
     );
   }
 
-  return (
-    <main className="app-shell docs-shell">
-      <header className="docs-topbar docs-topbar-edit">
-        <div className="docs-brand">
-          <span className="brand-mark">PW</span>
-          <div>
-            <h1>{document.title}</h1>
-            <p className="muted">Chỉnh sửa realtime cho tài liệu này.</p>
-          </div>
-        </div>
-        <div className="docs-actions">
-          <span className="tag">Role: {document.role}</span>
-          <button className="button secondary" onClick={() => navigate(`/documents/${document.id}`)}>Quay lại</button>
-        </div>
-      </header>
-      <section className="docs-page">
-        <div className="panel editor-page-hero">
-          <div>
-            <h2>{document.title}</h2>
-            <p className="muted">Bạn đang làm việc trên tài liệu này với quyền {document.role}.</p>
-          </div>
-          <div className="row gap-2">
-            <span className="tag">Realtime</span>
-            <span className="tag">Collaboration</span>
-          </div>
-        </div>
-        <DocumentEditor documentData={document} user={user!} />
-      </section>
-    </main>
-  );
+  return <EditorLoadedWorkspace document={document} user={user} />;
+}
+
+export function EditorPage() {
+  const { documentId } = useParams();
+  const { user } = useSession();
+  const numericDocumentId = Number(documentId);
+
+  if (!documentId || Number.isNaN(numericDocumentId) || !user) {
+    return <Navigate to="/documents" replace />;
+  }
+
+  return <EditorWorkspace documentId={numericDocumentId} user={user} />;
 }

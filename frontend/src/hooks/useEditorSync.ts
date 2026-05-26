@@ -6,15 +6,8 @@ export function useEditorSync(editor: Editor | null, ydoc: Y.Doc, editable: bool
   useEffect(() => {
     if (!editor) return;
     editor.setEditable(editable);
-    const handleUpdate = () => {
-      if (editor && ydoc) {
-        editor.commands.focus();
-      }
-    };
 
-    ydoc.on("update", handleUpdate);
-    return () => {
-      ydoc.off("update", handleUpdate);
-    };
+    // Synchronize editor with ydoc if needed, 
+    // but avoid stealing focus on every update.
   }, [editor, ydoc, editable]);
 }
