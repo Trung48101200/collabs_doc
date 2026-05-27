@@ -31,7 +31,7 @@ const useMocks = import.meta.env.VITE_USE_MOCKS === "true";
 const SESSION_UPDATED_EVENT = "collab-doc-session-updated";
 const SESSION_EXPIRED_EVENT = "collab-doc-session-expired";
 const STORAGE_KEY = "collab-doc-user";
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_URL = import.meta.env.VITE_API_URL || "http://backend:4000";
 
 export function useDocumentSocket(documentId: number, user: User, role: DocumentRole, initialYdocState?: string): UseDocumentSocketResult {
   const [connectionState, setConnectionState] = useState<"connecting" | "online" | "offline">(useMocks ? "offline" : "connecting");
