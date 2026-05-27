@@ -25,7 +25,7 @@ interface DocumentEditorProps {
 function DocumentEditorContent({ documentData, user, isVersionOpen, onCloseVersions, onPresenceChange }: DocumentEditorProps) {
   const [editor, setEditor] = useState<Editor | null>(null);
   const collaboration = useCollaboration();
-  const { ydoc, awareness, onlineUsers, remoteCursors, writeBlocked, sendCursorUpdate, sendSaveRequest } = collaboration;
+  const { ydoc, awareness, onlineUsers, remoteCursors, writeBlocked, sendCursorUpdate, sendSaveRequest, applyYdocState } = collaboration;
   const { canEdit: roleCanEdit, showToolbar: roleShowToolbar } = usePermission(documentData.role);
   const canEdit = roleCanEdit && !writeBlocked;
   const showToolbar = roleShowToolbar && !writeBlocked;
@@ -69,7 +69,12 @@ function DocumentEditorContent({ documentData, user, isVersionOpen, onCloseVersi
 
   return (
     <div className="editor-layout">
-      {showToolbar ? <EditorToolbar editor={editor} disabled={!canEdit} /> : null}
+      {showToolbar ? (
+        <EditorToolbar
+          editor={editor}
+          disabled={!canEdit}
+        />
+      ) : null}
       <EditorPermissionGuard role={documentData.role}>
         <RichTextEditor
           documentData={documentData}
@@ -90,6 +95,48 @@ function DocumentEditorContent({ documentData, user, isVersionOpen, onCloseVersi
         isOpen={isVersionOpen}
         onClose={onCloseVersions}
         onBeforeCreateVersion={handleSave}
+        onRestored={(restoredDocument) => {
+          console.log("[restore] onRestored callback", {
+            documentId: documentData.id,
+            hasYdocState: Boolean(restoredDocument.ydocState),
+            hasContentJson: Boolean(restoredDocument.contentJson),
+            htmlLength: restoredDocument.contentHtml?.length || 0
+          });
+          if (restoredDocument.ydocState) {
+            console.log("[restore] Apply ydocState directly");
+            applyYdocState(restoredDocument.ydocState);
+          } else if (editor) {
+            console.warn("[restore] Missing ydocState, fallback setContent");
+            if (restoredDocument.contentJson) {
+              editor.commands.setContent(restoredDocument.contentJson as any, false);
+            } else if (restoredDocument.contentHtml) {
+              editor.commands.setContent(restoredDocument.contentHtml, false);
+            } else {
+              editor.commands.clearContent(false);
+            }
+          }
+
+          if (editor) {
+            requestAnimationFrame(() => {
+              const currentText = editor.getText().trim();
+              const restoredText = (restoredDocument.contentText || "").trim();
+              if (currentText !== restoredText) {
+                console.warn("[restore] Reconcile editor content after ydoc apply", {
+                  currentTextLength: currentText.length,
+                  restoredTextLength: restoredText.length
+                });
+                if (restoredDocument.contentJson) {
+                  editor.commands.setContent(restoredDocument.contentJson as any, false);
+                } else if (restoredDocument.contentHtml) {
+                  editor.commands.setContent(restoredDocument.contentHtml, false);
+                } else {
+                  editor.commands.clearContent(false);
+                }
+              }
+            });
+          }
+          console.log("[restore] skip sendSyncRequest after restore (version-restored already applied)");
+        }}
       />
     </div>
   );

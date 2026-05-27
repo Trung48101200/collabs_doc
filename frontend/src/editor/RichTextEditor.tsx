@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import * as Y from "yjs";
-import { Extension } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -11,40 +10,10 @@ import TextStyle from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
+import { createEditorKeyboardShortcuts } from "./editorKeyboardShortcuts";
 import type { DocumentModel, User } from "../types";
 import type { Awareness } from "y-protocols/awareness";
 import type { Editor } from "@tiptap/react";
-
-const EditorKeyboardShortcuts = Extension.create({
-  name: "editorKeyboardShortcuts",
-
-  addKeyboardShortcuts() {
-    const runEditableCommand = (command: () => boolean) => {
-      if (!this.editor.isEditable) return false;
-      return command();
-    };
-
-    return {
-      "Mod-a": () => this.editor.chain().focus().selectAll().run(),
-      "Mod-b": () => runEditableCommand(() => this.editor.chain().focus().toggleBold().run()),
-      "Mod-i": () => runEditableCommand(() => this.editor.chain().focus().toggleItalic().run()),
-      "Mod-u": () => runEditableCommand(() => this.editor.chain().focus().toggleUnderline().run()),
-      "Mod-k": () => runEditableCommand(() => {
-        const previousUrl = this.editor.getAttributes("link").href as string | undefined;
-        const url = window.prompt("Nhap URL", previousUrl || "https://");
-        if (url === null) return true;
-        if (url === "") {
-          return this.editor.chain().focus().extendMarkRange("link").unsetLink().run();
-        }
-        return this.editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
-      }),
-      "Mod-Alt-0": () => runEditableCommand(() => this.editor.chain().focus().setParagraph().run()),
-      "Mod-Alt-1": () => runEditableCommand(() => this.editor.chain().focus().toggleHeading({ level: 1 }).run()),
-      "Mod-Alt-2": () => runEditableCommand(() => this.editor.chain().focus().toggleHeading({ level: 2 }).run()),
-      "Mod-Alt-3": () => runEditableCommand(() => this.editor.chain().focus().toggleHeading({ level: 3 }).run())
-    };
-  }
-});
 
 interface RichTextEditorProps {
   documentData: DocumentModel;
@@ -58,7 +27,17 @@ interface RichTextEditorProps {
   onlineUsers?: User[];
 }
 
-export function RichTextEditor({ documentData, ydoc, awareness, user, editable, onEditorReady, onCursorChange, remoteCursors = {}, onlineUsers = [] }: RichTextEditorProps) {
+export function RichTextEditor({
+  documentData,
+  ydoc,
+  awareness,
+  user,
+  editable,
+  onEditorReady,
+  onCursorChange,
+  remoteCursors = {},
+  onlineUsers = []
+}: RichTextEditorProps) {
   const [cursorMarkers, setCursorMarkers] = useState<Array<{ userId: number; name: string; color: string; top: number; left: number }>>([]);
   const cursorProvider = useMemo(() => {
     return {
@@ -85,7 +64,7 @@ export function RichTextEditor({ documentData, ydoc, awareness, user, editable, 
       Highlight.configure({ multicolor: true }),
       Link.configure({ openOnClick: false }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Collaboration.configure({ document: ydoc }),
+      Collaboration.configure({ document: ydoc, field: "default", provider: cursorProvider as any }),
       CollaborationCursor.configure({
         provider: cursorProvider as any,
         user: { id: user.id, name: user.name, color: user.color },
@@ -103,7 +82,7 @@ export function RichTextEditor({ documentData, ydoc, awareness, user, editable, 
           return caret;
         }
       }),
-      EditorKeyboardShortcuts
+      createEditorKeyboardShortcuts()
     ];
   }, [ydoc, cursorProvider, user.id, user.name, user.color]);
 

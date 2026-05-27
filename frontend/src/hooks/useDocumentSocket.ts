@@ -24,6 +24,7 @@ interface UseDocumentSocketResult {
   sendSaveRequest: () => void;
   sendVersionRequest: () => void;
   sendSyncRequest: () => void;
+  applyYdocState: (ydocState: string) => void;
 }
 
 const useMocks = import.meta.env.VITE_USE_MOCKS === "true";
@@ -175,13 +176,25 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
         },
         onSyncStateResponse: (update) => {
           if (update) {
+            console.log("[restore] sync-state-response received", {
+              documentId,
+              bytes: update.length
+            });
             Y.applyUpdate(ydoc, update, "remote");
+          } else {
+            console.warn("[restore] sync-state-response empty update", { documentId });
           }
         },
         onVersionRestored: (ydocState) => {
           if (ydocState) {
+            console.log("[restore] version-restored socket event", {
+              documentId,
+              base64Length: ydocState.length
+            });
             const update = decodeBase64ToUint8Array(ydocState);
             resetYdocState(update);
+          } else {
+            console.warn("[restore] version-restored missing ydocState", { documentId });
           }
         },
         onAccessDenied: ({ message }) => {
@@ -286,10 +299,13 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
 
       const resetYdocState = (update: Uint8Array) => {
         try {
+          // Restore must replace current document state, not merge.
+          // Yjs updates are monotonic, so applying an older snapshot alone
+          // won't remove newer content unless we clear the fragment first.
           ydoc.transact(() => {
-            const text = ydoc.getText("default");
-            text.delete(0, text.length);
-          });
+            const fragment = ydoc.getXmlFragment("default");
+            fragment.delete(0, fragment.length);
+          }, "remote");
           Y.applyUpdate(ydoc, update, "remote");
         } catch (err) {
           console.error("Failed to reset Yjs document state:", err);
@@ -373,6 +389,10 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
     if (useMocks || !socket.connected) return;
     try {
       const stateVector = Y.encodeStateVector(ydoc);
+      console.log("[restore] sendSyncRequest", {
+        documentId,
+        stateVectorBytes: stateVector.length
+      });
       socket.emit(SocketEvents.SyncStateRequest, {
         documentId,
         stateVector: Array.from(stateVector)
@@ -381,6 +401,28 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
       console.error("Failed to send sync request:", err);
     }
   }, [documentId, socket, ydoc]);
+
+  const applyYdocState = useCallback((ydocState: string) => {
+    if (!ydocState) return;
+    try {
+      console.log("[restore] applyYdocState", {
+        documentId,
+        base64Length: ydocState.length
+      });
+      const update = decodeBase64ToUint8Array(ydocState);
+      ydoc.transact(() => {
+        const fragment = ydoc.getXmlFragment("default");
+        fragment.delete(0, fragment.length);
+      }, "remote");
+      Y.applyUpdate(ydoc, update, "remote");
+      console.log("[restore] applyYdocState done", {
+        documentId,
+        updateBytes: update.length
+      });
+    } catch (err) {
+      console.error("Failed to apply restored ydoc state:", err);
+    }
+  }, [documentId, ydoc]);
 
   return useMemo(() => ({
     ydoc,
@@ -392,6 +434,7 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
     sendCursorUpdate,
     sendSaveRequest,
     sendVersionRequest,
-    sendSyncRequest
-  }), [ydoc, awareness, connectionState, onlineUsers, remoteCursors, writeBlocked, sendCursorUpdate, sendSaveRequest, sendVersionRequest, sendSyncRequest]);
+    sendSyncRequest,
+    applyYdocState
+  }), [ydoc, awareness, connectionState, onlineUsers, remoteCursors, writeBlocked, sendCursorUpdate, sendSaveRequest, sendVersionRequest, sendSyncRequest, applyYdocState]);
 }

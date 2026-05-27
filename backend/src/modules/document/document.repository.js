@@ -229,9 +229,6 @@ export class DocumentRepository {
     const fromUpdateId = updates.length ? Number(updates[0].id) : null;
     const toUpdateId = updates.length ? Number(updates[updates.length - 1].id) : previousToUpdateId || null;
     const updateCount = updates.length;
-    if (updateCount === 0) {
-      return null;
-    }
 
     const changeSetKey = `doc:${documentId}:updates:${fromUpdateId || previousToUpdateId || 0}-${toUpdateId || previousToUpdateId || 0}:v${versionNumber}`;
 

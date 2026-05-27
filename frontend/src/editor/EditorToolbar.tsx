@@ -1,6 +1,6 @@
-import { Bold, Highlighter, Italic, Link, List, ListOrdered, Underline, AlignCenter, AlignJustify, AlignLeft, AlignRight } from "lucide-react";
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Highlighter, Italic, Link, List, ListOrdered, Redo2, Underline, Undo2 } from "lucide-react";
 import type { Editor } from "@tiptap/react";
-import type { ReactNode } from "react";
+import { type ReactNode } from "react";
 
 function ToolbarButton({ title, active, disabled, onClick, children }: { title: string; active?: boolean; disabled: boolean; onClick: () => void; children: ReactNode; }) {
   return (
@@ -18,7 +18,23 @@ function ToolbarButton({ title, active, disabled, onClick, children }: { title: 
 }
 
 export function EditorToolbar({ editor, disabled }: { editor: Editor | null; disabled: boolean }) {
-  if (!editor) return <div className="toolbar" />;
+  const canUndo = !!editor && editor.can().undo();
+  const canRedo = !!editor && editor.can().redo();
+
+  if (!editor) {
+    return (
+      <div className="toolbar">
+        <span className="toolbar-group">
+          <ToolbarButton title="Undo (Ctrl+Z)" disabled onClick={() => undefined}>
+            <Undo2 size={17} />
+          </ToolbarButton>
+          <ToolbarButton title="Redo (Ctrl+Shift+Z)" disabled onClick={() => undefined}>
+            <Redo2 size={17} />
+          </ToolbarButton>
+        </span>
+      </div>
+    );
+  }
 
   function setLink() {
     const previousUrl = editor?.getAttributes("link").href as string | undefined;
@@ -33,6 +49,22 @@ export function EditorToolbar({ editor, disabled }: { editor: Editor | null; dis
 
   return (
     <div className="toolbar">
+      <span className="toolbar-group">
+        <ToolbarButton
+          title="Undo (Ctrl+Z)"
+          disabled={disabled || !canUndo}
+          onClick={() => editor?.chain().focus().undo().run()}
+        >
+          <Undo2 size={17} />
+        </ToolbarButton>
+        <ToolbarButton
+          title="Redo (Ctrl+Shift+Z)"
+          disabled={disabled || !canRedo}
+          onClick={() => editor?.chain().focus().redo().run()}
+        >
+          <Redo2 size={17} />
+        </ToolbarButton>
+      </span>
       <span className="toolbar-group">
         <ToolbarButton title="Bold (Ctrl+B)" active={editor.isActive("bold")} disabled={disabled} onClick={() => editor.chain().focus().toggleBold().run()}>
           <Bold size={17} />

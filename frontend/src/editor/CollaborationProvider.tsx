@@ -13,6 +13,7 @@ interface CollaborationContextValue {
   sendSaveRequest: () => void;
   sendVersionRequest: () => void;
   sendSyncRequest: () => void;
+  applyYdocState: (ydocState: string) => void;
 }
 
 const CollaborationContext = createContext<CollaborationContextValue | undefined>(undefined);
@@ -32,7 +33,11 @@ export function CollaborationProvider({
 }) {
   const collaboration = useDocumentSocket(documentId, user, role, initialYdocState);
 
-  return <CollaborationContext.Provider value={collaboration}>{children}</CollaborationContext.Provider>;
+  return (
+    <CollaborationContext.Provider value={collaboration}>
+      {children}
+    </CollaborationContext.Provider>
+  );
 }
 
 export function useCollaboration() {

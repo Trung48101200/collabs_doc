@@ -2,7 +2,7 @@ import { Download, History, RotateCcw, X } from "lucide-react";
 import { useState } from "react";
 import { createVersion, restoreVersion } from "../services/documentApi";
 import { useDocumentVersions } from "../hooks/useDocumentVersions";
-import type { DocumentVersion, User } from "../types";
+import type { DocumentModel, DocumentVersion, User } from "../types";
 
 interface VersionPanelProps {
   documentId: number;
@@ -11,7 +11,7 @@ interface VersionPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onBeforeCreateVersion: () => Promise<void>;
-  onRestored: () => Promise<void> | void;
+  onRestored: (document: DocumentModel) => Promise<void> | void;
 }
 
 function formatVersionDate(value: string) {
@@ -67,11 +67,19 @@ export function VersionPanel({
     setActionError(null);
     setBusyVersionId(versionId);
     try {
-      await restoreVersion(documentId, versionId, user);
+      console.log("[restore] Request restore", { documentId, versionId });
+      const restoredDocument = await restoreVersion(documentId, versionId, user);
+      console.log("[restore] API restore success", {
+        documentId,
+        versionId,
+        hasYdocState: Boolean(restoredDocument?.ydocState),
+        textLength: restoredDocument?.contentText?.length || 0
+      });
       await refresh();
       setSelectedVersionId(versionId);
-      await onRestored();
+      await onRestored(restoredDocument);
     } catch (err) {
+      console.error("[restore] API restore failed", { documentId, versionId, err });
       setActionError(err instanceof Error ? err.message : "Unable to restore version");
     } finally {
       setBusyVersionId(null);
@@ -121,37 +129,34 @@ export function VersionPanel({
                   {version.changeSetKey ? ` - ${version.changeSetKey}` : ""}
                 </small>
               </div>
-              <div className="version-item-actions">
+              <button
+                className="version-view-button"
+                type="button"
+                onClick={() => handleViewVersion(version.id)}
+              >
+                {isSelected ? "Hide" : "View"}
+              </button>
+              {index > 0 && canEdit ? (
                 <button
-                  className="version-view-button"
+                  className="version-restore-button"
                   type="button"
-                  onClick={() => handleViewVersion(version.id)}
+                  disabled={busyVersionId === version.id}
+                  onClick={() => handleRestore(version.id)}
                 >
-                  {isSelected ? "Hide" : "View"}
+                  <RotateCcw size={14} />
+                  {busyVersionId === version.id ? "Restoring" : "Restore"}
                 </button>
-                {index > 0 && canEdit ? (
-                  <button
-                    className="version-restore-button"
-                    type="button"
-                    disabled={busyVersionId === version.id}
-                    onClick={() => handleRestore(version.id)}
-                  >
-                    <RotateCcw size={14} />
-                    {busyVersionId === version.id ? "Restoring" : "Restore"}
-                  </button>
-                ) : null}
-              </div>
+              ) : null}
               {isSelected ? (
                 <section className="version-preview-card">
                   <h3>Version preview</h3>
-                  {version.contentText ? (
-                    <div className="version-preview-text">{version.contentText}</div>
-                  ) : (
-                    <div className="version-preview-text muted">No plain text preview available.</div>
-                  )}
                   {version.contentHtml ? (
                     <div className="version-preview-html" dangerouslySetInnerHTML={{ __html: version.contentHtml }} />
-                  ) : null}
+                  ) : version.contentText ? (
+                    <div className="version-preview-text">{version.contentText}</div>
+                  ) : (
+                    <div className="version-preview-text muted">No preview available.</div>
+                  )}
                 </section>
               ) : null}
             </article>
