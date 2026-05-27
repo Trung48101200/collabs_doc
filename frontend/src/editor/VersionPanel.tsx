@@ -1,6 +1,6 @@
 import { Download, History, RotateCcw, X } from "lucide-react";
 import { useState } from "react";
-import { restoreVersion } from "../services/documentApi";
+import { createVersion, restoreVersion } from "../services/documentApi";
 import { useDocumentVersions } from "../hooks/useDocumentVersions";
 import type { DocumentVersion, User } from "../types";
 
@@ -42,13 +42,16 @@ export function VersionPanel({
   const { versions, loading, error, refresh } = useDocumentVersions(documentId, user);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyVersionId, setBusyVersionId] = useState<number | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = useState<number | null>(null);
   const sortedVersions = [...versions].sort((a, b) => b.versionNumber - a.versionNumber);
 
   const handleCreateVersion = async () => {
+    console.log(documentId, user);
     setActionError(null);
     setBusyVersionId(-1);
     try {
       await onBeforeCreateVersion();
+      await createVersion(documentId, user);
       await refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Unable to create version");
@@ -66,12 +69,17 @@ export function VersionPanel({
     try {
       await restoreVersion(documentId, versionId, user);
       await refresh();
+      setSelectedVersionId(versionId);
       await onRestored();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Unable to restore version");
     } finally {
       setBusyVersionId(null);
     }
+  };
+
+  const handleViewVersion = (versionId: number) => {
+    setSelectedVersionId((current) => (current === versionId ? null : versionId));
   };
 
   return (
@@ -98,32 +106,57 @@ export function VersionPanel({
           </div>
         ) : null}
 
-        {sortedVersions.map((version, index) => (
-          <article className={`version-item-row ${index === 0 ? "current" : ""}`} key={version.id}>
-            <div className="version-item-main">
-              <div className="version-item-top">
-                <span>{getVersionLabel(version, index)}</span>
-                <strong>v{version.versionNumber}</strong>
+        {sortedVersions.map((version, index) => {
+          const isSelected = selectedVersionId === version.id;
+          return (
+            <article className={`version-item-row ${index === 0 ? "current" : ""} ${isSelected ? "selected" : ""}`} key={version.id}>
+              <div className="version-item-main">
+                <div className="version-item-top">
+                  <span>{getVersionLabel(version, index)}</span>
+                  <strong>v{version.versionNumber}</strong>
+                </div>
+                <p>{formatVersionDate(version.createdAt)}</p>
+                <small>
+                  {version.updateCount || 0} updates
+                  {version.changeSetKey ? ` - ${version.changeSetKey}` : ""}
+                </small>
               </div>
-              <p>{formatVersionDate(version.createdAt)}</p>
-              <small>
-                {version.updateCount || 0} updates
-                {version.changeSetKey ? ` - ${version.changeSetKey}` : ""}
-              </small>
-            </div>
-            {index > 0 && canEdit ? (
-              <button
-                className="version-restore-button"
-                type="button"
-                disabled={busyVersionId === version.id}
-                onClick={() => handleRestore(version.id)}
-              >
-                <RotateCcw size={14} />
-                {busyVersionId === version.id ? "Restoring" : "Restore"}
-              </button>
-            ) : null}
-          </article>
-        ))}
+              <div className="version-item-actions">
+                <button
+                  className="version-view-button"
+                  type="button"
+                  onClick={() => handleViewVersion(version.id)}
+                >
+                  {isSelected ? "Hide" : "View"}
+                </button>
+                {index > 0 && canEdit ? (
+                  <button
+                    className="version-restore-button"
+                    type="button"
+                    disabled={busyVersionId === version.id}
+                    onClick={() => handleRestore(version.id)}
+                  >
+                    <RotateCcw size={14} />
+                    {busyVersionId === version.id ? "Restoring" : "Restore"}
+                  </button>
+                ) : null}
+              </div>
+              {isSelected ? (
+                <section className="version-preview-card">
+                  <h3>Version preview</h3>
+                  {version.contentText ? (
+                    <div className="version-preview-text">{version.contentText}</div>
+                  ) : (
+                    <div className="version-preview-text muted">No plain text preview available.</div>
+                  )}
+                  {version.contentHtml ? (
+                    <div className="version-preview-html" dangerouslySetInnerHTML={{ __html: version.contentHtml }} />
+                  ) : null}
+                </section>
+              ) : null}
+            </article>
+          );
+        })}
       </div>
 
       <footer className="version-drawer-footer">

@@ -1,4 +1,4 @@
-import { Copy, Edit3, FileText, Grid2X2, List, LogOut, Search, Share2, Trash2, Users } from "lucide-react";
+import { Copy, Edit3, FileDiff, FileText, Grid2X2, List, LogOut, Search, Share2, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDocuments } from "../../hooks/useDocuments";
@@ -104,8 +104,8 @@ export function DocumentsPage() {
 
           <nav className="stitch-sidebar-nav">
             <button className={scope === "documents" ? "active" : ""} type="button" onClick={() => setScope("documents")}>
-              <FileText size={18} />
-              Documents
+              <FileDiff size={18} />
+              My Documents
             </button>
             <button className={scope === "shared" ? "active" : ""} type="button" onClick={() => setScope("shared")}>
               <Users size={18} />

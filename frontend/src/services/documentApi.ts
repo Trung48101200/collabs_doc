@@ -42,6 +42,13 @@ export function saveDocument(id: number, payload: Partial<DocumentModel> & { ydo
   }, user);
 }
 
+export function updateDocumentTitle(id: number, title: string, user: User): Promise<DocumentModel> {
+  return apiFetch<DocumentModel>(`/api/documents/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ title })
+  }, user);
+}
+
 export function createVersion(id: number, user: User): Promise<DocumentVersion> {
   return apiFetch<DocumentVersion>(`/api/documents/${id}/versions`, {
     method: "POST",

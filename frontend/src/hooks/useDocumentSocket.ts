@@ -11,6 +11,7 @@ import {
   encodeAwarenessUpdate
 } from "../utils/yjsEncoding";
 import type { DocumentRole, User } from "../types";
+import { getDocument } from "../services/documentApi";
 
 interface UseDocumentSocketResult {
   ydoc: Y.Doc;
@@ -180,7 +181,7 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
         onVersionRestored: (ydocState) => {
           if (ydocState) {
             const update = decodeBase64ToUint8Array(ydocState);
-            Y.applyUpdate(ydoc, update, "remote");
+            resetYdocState(update);
           }
         },
         onAccessDenied: ({ message }) => {
@@ -280,6 +281,18 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
         } catch (err) {
           console.error("Failed to emit Yjs update:", err);
           pendingUpdatesRef.current.push(update);
+        }
+      };
+
+      const resetYdocState = (update: Uint8Array) => {
+        try {
+          ydoc.transact(() => {
+            const text = ydoc.getText("default");
+            text.delete(0, text.length);
+          });
+          Y.applyUpdate(ydoc, update, "remote");
+        } catch (err) {
+          console.error("Failed to reset Yjs document state:", err);
         }
       };
 

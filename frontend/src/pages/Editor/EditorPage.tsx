@@ -1,5 +1,5 @@
-import { ArrowLeft, FileText, HelpCircle, History, Settings, Share2 } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Edit3, FileText, HelpCircle, History, Settings, Share2 } from "lucide-react";
+import { useEffect, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { ManageAccessModal } from "../../components/ManageAccessModal/ManageAccessModal";
 import { DocumentEditor } from "../../editor/DocumentEditor";
@@ -7,6 +7,7 @@ import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { useDocumentCollaborators } from "../../hooks/useDocumentCollaborators";
 import { useDocumentDetail } from "../../hooks/useDocumentDetail";
 import { useSession } from "../../hooks/useSession";
+import { updateDocumentTitle } from "../../services/documentApi";
 import type { Collaborator, DocumentModel, User } from "../../types";
 
 function CollaboratorRow({ collaborator, isCurrentUser }: { collaborator: Collaborator; isCurrentUser: boolean }) {
@@ -30,11 +31,27 @@ function EditorLoadedWorkspace({ document, user }: { document: DocumentModel; us
   const { collaborators, invite, remove, updateRole } = useDocumentCollaborators(document.id, user);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isVersionOpen, setIsVersionOpen] = useState(false);
+// --- Quản lý tài liệu và tiêu đề (từ nhánh feature/frontend-init) ---
+  const [currentDocument, setCurrentDocument] = useState<DocumentModel>(document);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(document.title || "");
+  const [titleSaving, setTitleSaving] = useState(false);
+  const [titleError, setTitleError] = useState<string | null>(null);
+
+  // --- Quản lý hiển thị người dùng cùng thao tác (từ nhánh collab/sync-cursor) ---
   const [presenceUsers, setPresenceUsers] = useState<User[]>([]);
+
+  // --- Effects và Logic ---
+  useEffect(() => {
+    setCurrentDocument(document);
+    setTitleDraft(document.title || "");
+  }, [document]);
+
+  const canEditTitle = currentDocument.role !== "viewer";
 
   const visibleCollaborators = collaborators.length
     ? collaborators
-    : [{ id: user.id, userId: user.id, name: user.name, email: user.email, role: document.role, color: user.color }];
+    : [{ id: user.id, userId: user.id, name: user.name, email: user.email, role: currentDocument.role, color: user.color }];
 
   const activeUsers = presenceUsers.slice(0, 3);
   const activeCount = presenceUsers.length;
@@ -86,9 +103,83 @@ function EditorLoadedWorkspace({ document, user }: { document: DocumentModel; us
             <button className="stitch-icon-button" type="button" onClick={() => navigate("/documents")} aria-label="Back to documents">
               <ArrowLeft size={18} />
             </button>
-            <div>
-              <h1>{document.title || "Untitled Document"}</h1>
-              <span className="saved-pill">Saved</span>
+            <div className="editor-title-stack">
+              {isEditingTitle ? (
+                <div className="title-edit-row">
+                  <input
+                    className="document-title-input"
+                    value={titleDraft}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) => setTitleDraft(event.target.value)}
+                    onBlur={async () => {
+                      if (!titleSaving) {
+                        const trimmedTitle = titleDraft.trim() || "Untitled Document";
+                        if (trimmedTitle !== currentDocument.title) {
+                          setTitleSaving(true);
+                          setTitleError(null);
+                          try {
+                            const updated = await updateDocumentTitle(currentDocument.id, trimmedTitle, user);
+                            setCurrentDocument(updated);
+                          } catch (err) {
+                            setTitleError(err instanceof Error ? err.message : "Unable to update title");
+                          } finally {
+                            setTitleSaving(false);
+                            setIsEditingTitle(false);
+                          }
+                        } else {
+                          setIsEditingTitle(false);
+                        }
+                      }
+                    }}
+                    onKeyDown={async (event: KeyboardEvent<HTMLInputElement>) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        const trimmedTitle = titleDraft.trim() || "Untitled Document";
+                        if (trimmedTitle !== currentDocument.title) {
+                          setTitleSaving(true);
+                          setTitleError(null);
+                          try {
+                            const updated = await updateDocumentTitle(currentDocument.id, trimmedTitle, user);
+                            setCurrentDocument(updated);
+                          } catch (err) {
+                            setTitleError(err instanceof Error ? err.message : "Unable to update title");
+                          } finally {
+                            setTitleSaving(false);
+                            setIsEditingTitle(false);
+                          }
+                        } else {
+                          setIsEditingTitle(false);
+                        }
+                      }
+                      if (event.key === "Escape") {
+                        setTitleDraft(currentDocument.title || "");
+                        setIsEditingTitle(false);
+                        setTitleError(null);
+                      }
+                    }}
+                    disabled={titleSaving}
+                    autoFocus
+                  />
+                  {titleSaving ? <span className="saved-pill">Saving...</span> : null}
+                  {titleError ? <div className="stitch-error title-error">{titleError}</div> : null}
+                </div>
+              ) : (
+                <div className="title-display-row">
+                  <div className="title-text-row">
+                    <h1>{currentDocument.title || "Untitled Document"}</h1>
+                    {canEditTitle ? (
+                      <button
+                        className="stitch-icon-button"
+                        type="button"
+                        onClick={() => setIsEditingTitle(true)}
+                        aria-label="Edit document title"
+                      >
+                        <Edit3 size={16} />
+                      </button>
+                    ) : null}
+                  </div>
+                  <span className="saved-pill">Saved</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -126,7 +217,7 @@ function EditorLoadedWorkspace({ document, user }: { document: DocumentModel; us
           </div>
         }>
           <DocumentEditor
-            documentData={document}
+            documentData={currentDocument}
             user={user}
             isVersionOpen={isVersionOpen}
             onCloseVersions={() => setIsVersionOpen(false)}
@@ -139,7 +230,7 @@ function EditorLoadedWorkspace({ document, user }: { document: DocumentModel; us
         isOpen={isShareOpen}
         onClose={() => setIsShareOpen(false)}
         collaborators={visibleCollaborators}
-        canManage={document.role === "owner"}
+        canManage={currentDocument.role === "owner"}
         onInvite={invite}
         onRemove={remove}
         onChangeRole={updateRole}
