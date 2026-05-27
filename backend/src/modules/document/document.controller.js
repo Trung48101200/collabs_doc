@@ -99,25 +99,11 @@ export async function restoreVersionAction(req, res, next) {
   try {
     const documentId = Number(req.params.id);
     const versionId = Number(req.params.versionId);
-    console.log("[restore] restoreVersionAction request", {
-      documentId,
-      versionId,
-      userId: req.user?.id
-    });
+    
     const restoredDoc = await documentService.restoreVersion(documentId, versionId, req.user.id);
-    console.log("[restore] restoreVersionAction success", {
-      documentId,
-      versionId,
-      hasYdocState: Boolean(restoredDoc?.ydocState),
-      ydocStateLength: restoredDoc?.ydocState?.length || 0
-    });
-
+    
     const io = req.app.get("io");
     if (io) {
-      console.log("[restore] emit version-restored", {
-        room: `document:${documentId}`,
-        hasYdocState: Boolean(restoredDoc?.ydocState)
-      });
       io.to(`document:${documentId}`).emit("version-restored", {
         documentId,
         ydocState: restoredDoc.ydocState || null

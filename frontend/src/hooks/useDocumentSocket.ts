@@ -187,10 +187,6 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
         },
         onVersionRestored: (ydocState) => {
           if (ydocState) {
-            console.log("[restore] version-restored socket event", {
-              documentId,
-              base64Length: ydocState.length
-            });
             const update = decodeBase64ToUint8Array(ydocState);
             resetYdocState(update);
           } else {

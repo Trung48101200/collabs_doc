@@ -46,7 +46,6 @@ export function VersionPanel({
   const sortedVersions = [...versions].sort((a, b) => b.versionNumber - a.versionNumber);
 
   const handleCreateVersion = async () => {
-    console.log(documentId, user);
     setActionError(null);
     setBusyVersionId(-1);
     try {
@@ -67,19 +66,12 @@ export function VersionPanel({
     setActionError(null);
     setBusyVersionId(versionId);
     try {
-      console.log("[restore] Request restore", { documentId, versionId });
       const restoredDocument = await restoreVersion(documentId, versionId, user);
-      console.log("[restore] API restore success", {
-        documentId,
-        versionId,
-        hasYdocState: Boolean(restoredDocument?.ydocState),
-        textLength: restoredDocument?.contentText?.length || 0
-      });
+      
       await refresh();
       setSelectedVersionId(versionId);
       await onRestored(restoredDocument);
     } catch (err) {
-      console.error("[restore] API restore failed", { documentId, versionId, err });
       setActionError(err instanceof Error ? err.message : "Unable to restore version");
     } finally {
       setBusyVersionId(null);

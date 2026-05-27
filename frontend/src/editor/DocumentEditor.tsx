@@ -135,7 +135,6 @@ function DocumentEditorContent({ documentData, user, isVersionOpen, onCloseVersi
               }
             });
           }
-          console.log("[restore] skip sendSyncRequest after restore (version-restored already applied)");
         }}
       />
     </div>
