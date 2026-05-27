@@ -57,6 +57,13 @@ export class DocumentService {
     return { ...document, role };
   }
 
+  async updateDocumentTitle(documentId, userId, title) {
+    await this.assertCanEdit(documentId, userId);
+    const normalizedTitle = String(title || "").trim() || "Untitled Document";
+    await this.repository.updateDocumentSnapshot(documentId, { title: normalizedTitle });
+    return this.getDocument(documentId, userId);
+  }
+
   async saveDocument(documentId, userId, payload) {
     await this.assertCanEdit(documentId, userId);
     await this.repository.updateDocumentSnapshot(documentId, payload);

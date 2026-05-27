@@ -37,7 +37,7 @@ export function useDocumentDetail(documentId: number, user: User): UseDocumentDe
     return () => {
       cancelled = true;
     };
-  }, [documentId, user]);
+  }, [documentId, user.id]);
 
   return { document, loading, error, refresh: load };
 }

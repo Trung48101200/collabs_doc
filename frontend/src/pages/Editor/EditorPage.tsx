@@ -119,6 +119,7 @@ function EditorLoadedWorkspace({ document, user }: { document: DocumentModel; us
                           try {
                             const updated = await updateDocumentTitle(currentDocument.id, trimmedTitle, user);
                             setCurrentDocument(updated);
+                            setTitleDraft(updated.title || trimmedTitle);
                           } catch (err) {
                             setTitleError(err instanceof Error ? err.message : "Unable to update title");
                           } finally {
@@ -140,6 +141,7 @@ function EditorLoadedWorkspace({ document, user }: { document: DocumentModel; us
                           try {
                             const updated = await updateDocumentTitle(currentDocument.id, trimmedTitle, user);
                             setCurrentDocument(updated);
+                            setTitleDraft(updated.title || trimmedTitle);
                           } catch (err) {
                             setTitleError(err instanceof Error ? err.message : "Unable to update title");
                           } finally {

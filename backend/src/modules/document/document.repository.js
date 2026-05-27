@@ -161,16 +161,20 @@ export class DocumentRepository {
 
   async updateDocumentSnapshot(id, payload) {
     const { title, contentText, contentJson, contentHtml, ydocState } = payload;
-    const update = {
-      contentText: contentText || "",
-      contentJson: contentJson || { type: "doc", content: [] },
-      contentHtml: contentHtml || "",
-      ydocState: ydocState ? Buffer.from(ydocState, "base64") : null
-    };
+    const update = {};
 
-    if (title) update.title = title;
+    if (title !== undefined) update.title = title;
+    if (contentText !== undefined) update.contentText = contentText;
+    if (contentJson !== undefined) update.contentJson = contentJson;
+    if (contentHtml !== undefined) update.contentHtml = contentHtml;
+    if (ydocState !== undefined) {
+      update.ydocState = ydocState ? Buffer.from(ydocState, "base64") : null;
+    }
 
-    await Document.update(update, { where: { id } });
+    if (Object.keys(update).length > 0) {
+      await Document.update(update, { where: { id } });
+    }
+
     return this.findDocumentById(id);
   }
 

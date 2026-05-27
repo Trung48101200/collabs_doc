@@ -34,14 +34,13 @@ function DocumentEditorContent({ documentData, user, isVersionOpen, onCloseVersi
   const handleSave = useCallback(async () => {
     if (!editor) return;
     await saveDocument(documentData.id, {
-      title: documentData.title,
       contentText: editor.getText(),
       contentJson: editor.getJSON(),
       contentHtml: editor.getHTML(),
       ydocState: encodeStateAsBase64(ydoc)
     }, user);
     sendSaveRequest();
-  }, [documentData.id, documentData.title, editor, sendSaveRequest, user, ydoc]);
+  }, [documentData.id, editor, sendSaveRequest, user, ydoc]);
 
   useEditorSync(editor, ydoc, canEdit);
   useAutosave({ editor, ydoc, intervalMs: 8000, onSave: handleSave });
