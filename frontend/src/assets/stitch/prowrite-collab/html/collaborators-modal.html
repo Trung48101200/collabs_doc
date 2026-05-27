@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Manage Access - ProWrite Collab</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .editor-canvas-width {
+            max-width: 800px;
+        }
+        .backdrop-blur-md {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed-dim": "#c5c7c8",
+                        "secondary-container": "#e1e3e4",
+                        "background": "#f9f9ff",
+                        "on-secondary-fixed-variant": "#454748",
+                        "tertiary-fixed": "#d9e3f4",
+                        "primary-container": "#2563eb",
+                        "outline": "#737686",
+                        "tertiary-container": "#646e7d",
+                        "on-tertiary-container": "#e9f1ff",
+                        "tertiary-fixed-dim": "#bdc7d8",
+                        "on-tertiary-fixed-variant": "#3e4755",
+                        "surface-dim": "#d3daef",
+                        "on-primary-container": "#eeefff",
+                        "surface-variant": "#dce2f7",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "primary-fixed": "#dbe1ff",
+                        "secondary-fixed": "#e1e3e4",
+                        "surface-container-low": "#f1f3ff",
+                        "surface-container-high": "#e1e8fd",
+                        "secondary": "#5c5f60",
+                        "surface-container": "#e9edff",
+                        "outline-variant": "#c3c6d7",
+                        "on-surface": "#141b2b",
+                        "surface": "#f9f9ff",
+                        "surface-tint": "#0053db",
+                        "on-background": "#141b2b",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6",
+                        "inverse-surface": "#293040",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "surface-bright": "#f9f9ff",
+                        "inverse-on-surface": "#edf0ff",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed": "#191c1d",
+                        "primary": "#004ac6",
+                        "on-error": "#ffffff",
+                        "surface-container-highest": "#dce2f7",
+                        "on-secondary-container": "#626566",
+                        "inverse-primary": "#b4c5ff",
+                        "tertiary": "#4c5664",
+                        "on-primary-fixed": "#00174b",
+                        "on-surface-variant": "#434655",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed": "#121c28",
+                        "on-primary-fixed-variant": "#003ea8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "40px",
+                        "sm": "16px",
+                        "editor-max-width": "800px",
+                        "xl": "48px",
+                        "xs": "8px",
+                        "lg": "32px",
+                        "gutter": "24px",
+                        "base": "4px",
+                        "margin-mobile": "16px",
+                        "md": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-md": ["14px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "30px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-hidden">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline flex justify-between items-center w-full px-md py-xs h-16 sticky top-0 z-50">
+<div class="flex items-center gap-md">
+<span class="text-headline-md font-headline-md font-bold text-primary dark:text-primary-fixed">ProWrite Collab</span>
+<div class="hidden md:flex items-center gap-sm ml-lg">
+<nav class="flex gap-md">
+<a class="text-primary dark:text-primary-fixed-dim font-bold border-b-2 border-primary font-label-md text-label-md py-2 transition-all" href="#">Documents</a>
+<a class="text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors font-label-md text-label-md py-2" href="#">Shared</a>
+<a class="text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors font-label-md text-label-md py-2" href="#">Archive</a>
+</nav>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="material-symbols-outlined text-secondary hover:bg-surface-container p-2 rounded-full cursor-pointer transition-transform active:scale-95" title="History">history</button>
+<button class="material-symbols-outlined text-secondary hover:bg-surface-container p-2 rounded-full cursor-pointer transition-transform active:scale-95" title="Share">share</button>
+<div class="h-8 w-[1px] bg-outline-variant mx-xs"></div>
+<img alt="User profile avatar" class="w-8 h-8 rounded-full border border-outline-variant object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBt7euOBYTYaw2A2dDlUCFrJd_1xX81vUyCxBrNDEgViozobo1k4zOZtX8JEGlF8ZSSW_SoDlNONYUV4E2zl1ssXtb4dNYio7xCswTS1OwLh4QrwTfs4bzEdP4plsGis6so1-672EIob98Fdnc5VaUCnaRM04mttJdUfRNWjJEet4Uc_p4ZaO1LZaARDoIDGJUNtAQoukMM4iwBzWfSZfqIuao-f0RTuMlzlOTi6wpROmru2rz9s8CC1N64gV2W-Jlh9GKDwSmZUwDN"/>
+</div>
+</header>
+<main class="flex h-[calc(100vh-64px)] overflow-hidden">
+<!-- SideNavBar -->
+<aside class="bg-surface-container-low dark:bg-surface-container-lowest border-r border-outline-variant dark:border-outline fixed left-0 top-16 h-full w-[260px] flex flex-col p-sm z-40">
+<div class="mb-lg">
+<div class="flex items-center gap-sm px-xs mb-md">
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined">group</span>
+</div>
+<div>
+<p class="font-headline-sm text-headline-sm text-on-surface dark:text-on-surface-variant">Workspace</p>
+<p class="font-label-sm text-label-sm text-secondary">Collaborative Team</p>
+</div>
+</div>
+<button class="w-full bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary py-xs px-md rounded-lg font-label-md flex items-center justify-center gap-sm mb-lg transition-all active:scale-95">
+<span class="material-symbols-outlined">add</span>
+                    New Document
+                </button>
+<nav class="space-y-xs">
+<a class="flex items-center gap-sm px-sm py-2 bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-lg font-label-sm text-label-sm transition-all" href="#">
+<span class="material-symbols-outlined">description</span>
+                        Documents
+                    </a>
+<a class="flex items-center gap-sm px-sm py-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-surface-container-high rounded-lg font-label-sm text-label-sm transition-all" href="#">
+<span class="material-symbols-outlined">group</span>
+                        Shared
+                    </a>
+<a class="flex items-center gap-sm px-sm py-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-surface-container-high rounded-lg font-label-sm text-label-sm transition-all" href="#">
+<span class="material-symbols-outlined">edit_note</span>
+                        Drafts
+                    </a>
+<a class="flex items-center gap-sm px-sm py-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-surface-container-high rounded-lg font-label-sm text-label-sm transition-all" href="#">
+<span class="material-symbols-outlined">archive</span>
+                        Archive
+                    </a>
+</nav>
+</div>
+<div class="mt-auto space-y-xs pt-lg">
+<a class="flex items-center gap-sm px-sm py-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant rounded-lg font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined">settings</span>
+                    Settings
+                </a>
+<a class="flex items-center gap-sm px-sm py-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant rounded-lg font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined">help</span>
+                    Help
+                </a>
+</div>
+</aside>
+<!-- Main Editor Canvas Area (Background for Modal) -->
+<section class="ml-[260px] flex-1 bg-background relative flex flex-col">
+<div class="w-full h-full flex flex-col items-center pt-xl">
+<div class="editor-canvas-width w-full bg-surface-container-lowest p-xl min-h-[819px] border border-outline-variant shadow-sm rounded-t-xl opacity-40">
+<h1 class="font-headline-lg text-headline-lg mb-md">Q3 Product Strategy Roadmap</h1>
+<p class="font-body-lg text-body-lg text-secondary mb-xl leading-relaxed">
+                        This document outlines our key initiatives for the upcoming quarter. We aim to increase collaborative efficiency by 40% through the implementation of real-time editing modules...
+                    </p>
+<div class="space-y-md">
+<div class="h-4 bg-surface-container w-3/4 rounded-full"></div>
+<div class="h-4 bg-surface-container w-full rounded-full"></div>
+<div class="h-4 bg-surface-container w-5/6 rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Modal Backdrop -->
+<div class="fixed inset-0 z-[60] flex items-center justify-center bg-inverse-surface/10 backdrop-blur-md">
+<!-- Collaborator Modal -->
+<div class="bg-surface-container-lowest w-full max-w-[560px] rounded-xl shadow-2xl border border-outline-variant overflow-hidden animate-in fade-in zoom-in duration-300">
+<!-- Modal Header -->
+<div class="px-md py-md border-b border-outline-variant flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Manage Access</h2>
+<button class="material-symbols-outlined text-secondary hover:bg-surface-variant p-2 rounded-full transition-colors">close</button>
+</div>
+<!-- Invite Section -->
+<div class="p-md bg-surface-container-low border-b border-outline-variant">
+<label class="font-label-sm text-label-sm text-secondary mb-2 block">Invite collaborators via email</label>
+<div class="flex gap-sm">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">mail</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-bright border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-body-sm text-body-sm" placeholder="Enter email address" type="email"/>
+</div>
+<button class="bg-primary text-on-primary px-lg py-2 rounded-lg font-label-md transition-all hover:bg-primary/90 active:scale-95">
+                                Invite
+                            </button>
+</div>
+</div>
+<!-- Collaborator List -->
+<div class="max-h-[400px] overflow-y-auto">
+<div class="px-md py-sm bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between">
+<div class="flex items-center gap-md">
+<div class="relative">
+<img alt="John Smith Profile" class="w-10 h-10 rounded-full border border-outline-variant" data-alt="A professional headshot of a smiling male designer in his early 30s with short hair and a neutral gray t-shirt. He is set against a clean, minimal white office background with soft lighting. The visual style is high-key and modern, reflecting a premium collaborative software interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDi-2iFSTRQ6hGDkSZ_92uMSkszV0Os3QTYfaIH6MJEdoFVPxLJj5qaKpvfkghYBQzAq6aObCzh5Uilspgek2pnpHUHl0YUSRdw_L3pvvsoWWePDtCeOOaCM9g-qt1Cl0GzxxNG7g1xbAOMmqIM7Rttfwua41hNZOSJRmNeudA5dXAXnfoZtEKLaE7ig4Pb-vTf8f_n8Tc_6ijOs-0LQYhhNTNPpXC-PizfHSBqZcx_kA49GAbxF0mF2UQnon1TEkGkk89r0Wp5DTOF"/>
+<div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">John Smith (You)</p>
+<p class="font-body-sm text-body-sm text-secondary">john.smith@prowrite.com</p>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<span class="font-label-sm text-label-sm text-outline-variant bg-surface-container px-3 py-1 rounded-full uppercase tracking-wider">Owner</span>
+<div class="w-8"></div> <!-- Placeholder for alignment with action buttons -->
+</div>
+</div>
+<div class="px-md py-sm bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-md">
+<img alt="Alice Wong Profile" class="w-10 h-10 rounded-full border border-outline-variant" data-alt="A studio portrait of a female creative professional with glasses and a stylish blazer. She has a warm, confident expression. The background is a soft blue-toned gradient that feels corporate yet welcoming. The lighting is diffused and professional, matching a sleek minimalist UI aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHTR5mGhUBSixvDZrmLNTkqQ_HduRzMG6oidRPahhRoVEruN8JIKyTOE58xsgJnKORIVj_IN4sf2rrwRvrvB8mfZFcJ4Que6BKKlQj_9tFaLEGOoNHDLhriq0RG7LT0n4qVYmtnyOZwaiZq59fMjZ-jqHxNBymDR-d5obnCq8DLn6ca48BUvqj4S-83mQJLMlMImAjWK3CgXXbUQJfXQjwM3-90jaNML4vwk6xl08IBC7vW1xDBLrLSGA7sNGLS4XpDmDIGVtj5hdj"/>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Alice Wong</p>
+<p class="font-body-sm text-body-sm text-secondary">alice.w@designlabs.io</p>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<select class="bg-transparent border-none font-label-sm text-label-sm text-on-surface-variant focus:ring-0 cursor-pointer hover:bg-surface-container rounded-md py-1">
+<option selected="" value="editor">Editor</option>
+<option value="viewer">Viewer</option>
+</select>
+<button class="material-symbols-outlined text-secondary opacity-0 group-hover:opacity-100 hover:text-error transition-all p-1 rounded-full hover:bg-error-container/20" title="Remove">person_remove</button>
+</div>
+</div>
+<div class="px-md py-sm bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-md">
+<img alt="Marcus Lane Profile" class="w-10 h-10 rounded-full border border-outline-variant" data-alt="Close up photograph of a diverse young professional man with a creative haircut and a yellow sweater. He looks directly at the camera with a calm demeanor. The environment is a bright, sun-drenched co-working space with blurry plants in the background. High-quality corporate modern photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBroJb0-Zj9JW1liTH2Ebg2BiVoveLN1lffDq5_DnMhA-3IvGk-ZnAVX9z8ZJ2iOcexwwdhRRVAsgcpDclpO-wOgEwzcjm_M1zymu_kCjh_7zzGyi8UvP-Pzxx_Z5svmrYyttzhliknGYEnfiH_g5N85Qi9jZpidOdN_df_HDY0pfKavbleyx-jPyUs3KOdXcKoiz1g2xEuUziCXiH32fVxKyQ2LzkwdVgA_1tVZUwsDtu0jl7OYBwwPx4GHXQ8UpUnM2V2awqz-l6X"/>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Marcus Lane</p>
+<p class="font-body-sm text-body-sm text-secondary">m.lane@techflow.com</p>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<select class="bg-transparent border-none font-label-sm text-label-sm text-on-surface-variant focus:ring-0 cursor-pointer hover:bg-surface-container rounded-md py-1">
+<option value="editor">Editor</option>
+<option selected="" value="viewer">Viewer</option>
+</select>
+<button class="material-symbols-outlined text-secondary opacity-0 group-hover:opacity-100 hover:text-error transition-all p-1 rounded-full hover:bg-error-container/20" title="Remove">person_remove</button>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="p-md bg-surface-container-lowest border-t border-outline-variant flex justify-between items-center">
+<div class="flex items-center gap-xs text-secondary">
+<span class="material-symbols-outlined text-sm">public</span>
+<span class="font-label-sm text-label-sm">Anyone with the link can view</span>
+</div>
+<button class="bg-inverse-surface text-inverse-on-surface px-lg py-2 rounded-lg font-label-md transition-all hover:opacity-90 active:scale-95">
+                            Done
+                        </button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer Shell (Hidden in task focus, but included for system consistency) -->
+<footer class="fixed bottom-0 left-0 w-full bg-surface-container-lowest dark:bg-surface-dim border-t border-outline-variant dark:border-outline flex justify-between items-center px-md py-sm z-50">
+<span class="font-label-md text-label-md text-secondary">© 2024 ProWrite Systems. All rights reserved.</span>
+<div class="flex gap-md">
+<a class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed underline transition-opacity font-label-sm text-label-sm" href="#">Privacy Policy</a>
+<a class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed underline transition-opacity font-label-sm text-label-sm" href="#">Terms of Service</a>
+<a class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed underline transition-opacity font-label-sm text-label-sm" href="#">Status</a>
+</div>
+</footer>
+<script>
+        // Simple interactivity for demonstration
+        document.addEventListener('DOMContentLoaded', () => {
+            const inviteBtn = document.querySelector('button:contains("Invite")');
+            if(inviteBtn) {
+                inviteBtn.addEventListener('click', () => {
+                    const emailInput = document.querySelector('input[type="email"]');
+                    if(emailInput.value) {
+                        alert(`Invitation sent to: ${emailInput.value}`);
+                        emailInput.value = '';
+                    }
+                });
+            }
+
+            // Close modal simulation
+            const closeBtn = document.querySelector('.material-symbols-outlined:contains("close")');
+            const doneBtn = document.querySelector('button:contains("Done")');
+            [closeBtn, doneBtn].forEach(btn => {
+                if(btn) {
+                    btn.addEventListener('click', () => {
+                        document.querySelector('.fixed.inset-0.z-\\[60\\]').style.display = 'none';
+                    });
+                }
+            });
+        });
+
+        // jQuery-like contains selector for vanilla JS
+        window.NodeList.prototype.forEach = Array.prototype.forEach;
+        function findBtnByText(text) {
+           return Array.from(document.querySelectorAll('button, a')).find(el => el.textContent.trim() === text);
+        }
+    </script>
+</body></html>

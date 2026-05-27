@@ -8,6 +8,7 @@ function serializeUser(user, includePassword = false) {
     id: Number(plain.id),
     name: plain.name,
     email: plain.email,
+    sessionVersion: Number(plain.sessionVersion || 1),
     createdAt: plain.createdAt
   };
 
@@ -30,6 +31,11 @@ export class UserRepository {
   async findUserById(id) {
     const user = await User.findByPk(id);
     return serializeUser(user);
+  }
+
+  async bumpSessionVersion(userId) {
+    await User.increment({ sessionVersion: 1 }, { where: { id: userId } });
+    return this.findUserById(userId);
   }
 }
 

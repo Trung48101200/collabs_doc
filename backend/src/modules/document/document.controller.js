@@ -40,7 +40,21 @@ export async function getDocumentAction(req, res, next) {
 
 export async function updateDocumentAction(req, res, next) {
   try {
-    res.json(await documentService.saveDocument(Number(req.params.id), req.user.id, req.body));
+    const documentId = Number(req.params.id);
+    const { title, contentText, contentJson, contentHtml, ydocState } = req.body || {};
+    const isTitleOnly =
+      title !== undefined &&
+      contentText === undefined &&
+      contentJson === undefined &&
+      contentHtml === undefined &&
+      ydocState === undefined;
+
+    if (isTitleOnly) {
+      res.json(await documentService.updateDocumentTitle(documentId, req.user.id, title));
+      return;
+    }
+
+    res.json(await documentService.saveDocument(documentId, req.user.id, req.body));
   } catch (error) {
     next(error);
   }
@@ -85,8 +99,9 @@ export async function restoreVersionAction(req, res, next) {
   try {
     const documentId = Number(req.params.id);
     const versionId = Number(req.params.versionId);
+    
     const restoredDoc = await documentService.restoreVersion(documentId, versionId, req.user.id);
-
+    
     const io = req.app.get("io");
     if (io) {
       io.to(`document:${documentId}`).emit("version-restored", {
