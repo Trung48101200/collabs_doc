@@ -1,5 +1,6 @@
 import type { User } from "../types";
 import { apiFetch } from "./api";
+import { getUserColor } from "../utils/userColor";
 
 interface AuthResponse {
   accessToken?: string;
@@ -12,8 +13,6 @@ interface AuthResponse {
   };
 }
 
-const defaultColor = "#2563eb";
-
 export async function login(email: string, password: string): Promise<User> {
   const result = await apiFetch<AuthResponse>("/api/auth/login", {
     method: "POST",
@@ -24,7 +23,7 @@ export async function login(email: string, password: string): Promise<User> {
     id: result.user.id,
     name: result.user.name,
     email: result.user.email,
-    color: defaultColor,
+    color: getUserColor(result.user.id),
     token: result.accessToken || result.token,
     refreshToken: result.refreshToken
   };
@@ -40,7 +39,7 @@ export async function register(name: string, email: string, password: string): P
     id: result.user.id,
     name: result.user.name,
     email: result.user.email,
-    color: defaultColor
+    color: getUserColor(result.user.id)
   };
 }
 

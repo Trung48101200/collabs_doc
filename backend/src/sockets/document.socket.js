@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import * as Y from "yjs";
 import { documentService } from "../modules/document/document.service.js";
 import { tokenRepository } from "../modules/auth/token.repository.js";
+import { userRepository } from "../modules/user/user.repository.js";
 
 const activeUsersByDocument = new Map();
 
@@ -10,7 +11,13 @@ function getRoom(documentId) {
 }
 
 function getUsers(documentId) {
-  return Array.from(activeUsersByDocument.get(String(documentId))?.values() || []);
+  const users = Array.from(activeUsersByDocument.get(String(documentId))?.values() || []);
+  const seen = new Set();
+  return users.filter((user) => {
+    if (seen.has(user.id)) return false;
+    seen.add(user.id);
+    return true;
+  });
 }
 
 function addUser(documentId, socketId, user) {
@@ -54,6 +61,11 @@ export function registerDocumentSocket(io) {
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET || "admin-collab-docs-super-secret-key-2026");
+      const user = await userRepository.findUserById(Number(decoded.id));
+      if (!user) {
+        return next(new Error("Authentication error. Invalid or expired token."));
+      }
+
       socket.data.user = {
         id: Number(decoded.id),
         email: decoded.email,
@@ -138,23 +150,12 @@ export function registerDocumentSocket(io) {
           clientId
         });
 
-        console.log(`[yjs-update] Received Yjs update from userId: ${socket.data.user.id}, socket: ${socket.id} for documentId: ${documentId}`);
-        const roomName = getRoom(documentId);
-        const activeSockets = await io.in(roomName).fetchSockets();
-        console.log(`[yjs-update] Active sockets in room "${roomName}":`, activeSockets.map(s => ({
-          socketId: s.id,
-          userId: s.data?.user?.id,
-          name: s.data?.user?.name
-        })));
-
-        // Broadcast Yjs update to other collaborators in the room
-        io.to(roomName).emit("yjs-update", {
+        socket.to(getRoom(documentId)).emit("yjs-update", {
           documentId,
           userId,
           update,
           clientId
         });
-        console.log(`[yjs-update] Broadcasted to room "${roomName}" from socket: ${socket.id}`);
       } catch (error) {
         console.error("Error handling Yjs update:", error);
       }
@@ -163,8 +164,15 @@ export function registerDocumentSocket(io) {
     // 4. Handle Offline Sync & Reconnect (Yjs sync-state-request)
     socket.on("sync-state-request", async ({ documentId, stateVector }) => {
       try {
-        const role = socket.data.roles.get(String(documentId));
-        if (!role) return; // User must have joined the document room
+        let role = socket.data.roles.get(String(documentId));
+        if (!role) {
+          role = await documentService.assertCanRead(documentId, socket.data.user.id);
+          if (role) {
+            socket.data.roles.set(String(documentId), role);
+          } else {
+            return;
+          }
+        }
 
         // Fetch current document ydoc_state from DB
         const currentYdocState = await documentService.getYdocState(documentId, socket.data.user.id);
@@ -192,10 +200,25 @@ export function registerDocumentSocket(io) {
     });
 
     // 5. Handle collaborative awareness updates (Cursor, Selection)
-    socket.on("awareness-update", ({ documentId, awareness }) => {
-      // Basic security check: Make sure client is in the document room
-      if (socket.rooms.has(getRoom(documentId))) {
-        socket.to(getRoom(documentId)).emit("awareness-update", awareness);
+    socket.on("awareness-update", async ({ documentId, awareness }) => {
+      try {
+        const roomName = getRoom(documentId);
+        // If this socket wasn't fully joined yet (race after reconnect),
+        // ensure it still has read access and self-heal by joining the room.
+        if (!socket.rooms.has(roomName)) {
+          let role = socket.data.roles.get(String(documentId));
+          if (!role) {
+            role = await documentService.assertCanRead(documentId, socket.data.user.id);
+            if (!role) return;
+            socket.data.roles.set(String(documentId), role);
+          }
+          socket.join(roomName);
+          socket.data.joinedDocuments.add(String(documentId));
+        }
+
+        socket.to(roomName).emit("awareness-update", awareness);
+      } catch (error) {
+        console.error("Error handling awareness update:", error);
       }
     });
 
@@ -232,7 +255,21 @@ export function registerDocumentSocket(io) {
 
     // 8. Client disconnection
     socket.on("disconnect", () => {
-      for (const documentId of socket.data.joinedDocuments) {
+      // Primary cleanup: remove from documents the socket has joined.
+      if (socket.data?.joinedDocuments) {
+        for (const documentId of socket.data.joinedDocuments) {
+          removeUser(documentId, socket.id);
+          io.to(getRoom(documentId)).emit("user-list", {
+            documentId,
+            users: getUsers(documentId)
+          });
+        }
+      }
+
+      // Fallback cleanup: ensure no stale socket remains even if joinedDocuments
+      // was not populated (e.g., disconnect before join-document finishes).
+      for (const [documentId, users] of activeUsersByDocument.entries()) {
+        if (!users.has(socket.id)) continue;
         removeUser(documentId, socket.id);
         io.to(getRoom(documentId)).emit("user-list", {
           documentId,

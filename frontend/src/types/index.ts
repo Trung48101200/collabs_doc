@@ -32,6 +32,7 @@ export interface DocumentModel {
   contentJson: unknown;
   contentHtml: string;
   role: DocumentRole;
+  ydocState?: string;
   versions?: DocumentVersion[];
 }
 
@@ -68,8 +69,7 @@ export interface DocumentSocketPayloads {
   };
   awarenessUpdate: {
     documentId: number;
-    update: number[];
-    clientId: string;
+    awareness: number[];
   };
   cursorUpdate: {
     documentId: number;

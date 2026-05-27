@@ -5,7 +5,6 @@ import { EditorToolbar } from "./EditorToolbar";
 import { RichTextEditor } from "./RichTextEditor";
 import { VersionPanel } from "./VersionPanel";
 import { EditorPermissionGuard } from "./EditorPermissionGuard";
-import { CursorLayer } from "./CursorLayer";
 import { useAutosave } from "../hooks/useAutosave";
 import { useCollaborators } from "../hooks/useCollaborators";
 import { usePermission } from "../hooks/usePermission";
@@ -20,13 +19,16 @@ interface DocumentEditorProps {
   user: User;
   isVersionOpen: boolean;
   onCloseVersions: () => void;
+  onPresenceChange?: (users: User[]) => void;
 }
 
-function DocumentEditorContent({ documentData, user, isVersionOpen, onCloseVersions }: DocumentEditorProps) {
+function DocumentEditorContent({ documentData, user, isVersionOpen, onCloseVersions, onPresenceChange }: DocumentEditorProps) {
   const [editor, setEditor] = useState<Editor | null>(null);
   const collaboration = useCollaboration();
-  const { ydoc, awareness, onlineUsers, sendSaveRequest, sendSyncRequest } = collaboration;
-  const { canEdit, showToolbar } = usePermission(documentData.role);
+  const { ydoc, awareness, onlineUsers, remoteCursors, writeBlocked, sendCursorUpdate, sendSaveRequest } = collaboration;
+  const { canEdit: roleCanEdit, showToolbar: roleShowToolbar } = usePermission(documentData.role);
+  const canEdit = roleCanEdit && !writeBlocked;
+  const showToolbar = roleShowToolbar && !writeBlocked;
   const collaborators = useCollaborators(onlineUsers, user.id);
 
   const handleSave = useCallback(async () => {
@@ -43,6 +45,12 @@ function DocumentEditorContent({ documentData, user, isVersionOpen, onCloseVersi
 
   useEditorSync(editor, ydoc, canEdit);
   useAutosave({ editor, ydoc, intervalMs: 8000, onSave: handleSave });
+
+  useEffect(() => {
+    if (onPresenceChange) {
+      onPresenceChange(collaborators.allUsers);
+    }
+  }, [collaborators.allUsers, onPresenceChange]);
 
   useEffect(() => {
     const handleSaveShortcut = (event: KeyboardEvent) => {
@@ -63,9 +71,18 @@ function DocumentEditorContent({ documentData, user, isVersionOpen, onCloseVersi
   return (
     <div className="editor-layout">
       {showToolbar ? <EditorToolbar editor={editor} disabled={!canEdit} /> : null}
-      <CursorLayer collaborators={collaborators.peers} />
       <EditorPermissionGuard role={documentData.role}>
-        <RichTextEditor documentData={documentData} ydoc={ydoc} awareness={awareness} user={user} editable={canEdit} onEditorReady={setEditor} />
+        <RichTextEditor
+          documentData={documentData}
+          ydoc={ydoc}
+          awareness={awareness}
+          user={user}
+          editable={canEdit}
+          onEditorReady={setEditor}
+          onCursorChange={sendCursorUpdate}
+          remoteCursors={remoteCursors}
+          onlineUsers={onlineUsers}
+        />
       </EditorPermissionGuard>
       <VersionPanel
         documentId={documentData.id}
@@ -74,23 +91,21 @@ function DocumentEditorContent({ documentData, user, isVersionOpen, onCloseVersi
         isOpen={isVersionOpen}
         onClose={onCloseVersions}
         onBeforeCreateVersion={handleSave}
-        onRestored={async () => {
-          sendSyncRequest();
-        }}
       />
     </div>
   );
 }
 
-export function DocumentEditor({ documentData, user, isVersionOpen, onCloseVersions }: DocumentEditorProps) {
+export function DocumentEditor({ documentData, user, isVersionOpen, onCloseVersions, onPresenceChange }: DocumentEditorProps) {
   const initialState = useMemo(() => ({ documentData, user }), [documentData, user]);
   return (
-    <CollaborationProvider documentId={documentData.id} user={user} role={documentData.role}>
+    <CollaborationProvider documentId={documentData.id} user={user} role={documentData.role} initialYdocState={documentData.ydocState}>
       <DocumentEditorContent
         documentData={initialState.documentData}
         user={initialState.user}
         isVersionOpen={isVersionOpen}
         onCloseVersions={onCloseVersions}
+        onPresenceChange={onPresenceChange}
       />
     </CollaborationProvider>
   );

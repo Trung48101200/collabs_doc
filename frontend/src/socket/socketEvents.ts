@@ -1,6 +1,7 @@
 export const SocketEvents = {
   JoinDocument: "join-document",
   LeaveDocument: "leave-document",
+  AccessDenied: "access-denied",
   YjsUpdate: "yjs-update",
   AwarenessUpdate: "awareness-update",
   CursorUpdate: "cursor-update",

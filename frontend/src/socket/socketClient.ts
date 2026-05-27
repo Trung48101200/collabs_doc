@@ -15,11 +15,12 @@ function getSavedUser() {
   }
 }
 
-export function createSocketClient() {
+export function createSocketClient(token?: string) {
   const savedUser = getSavedUser();
+  const activeToken = token || savedUser?.token;
   return io(SOCKET_URL, {
     autoConnect: true,
     transports: ["websocket", "polling"],
-    auth: savedUser?.token ? { token: savedUser.token } : undefined
+    auth: activeToken ? { token: activeToken } : undefined
   });
 }
