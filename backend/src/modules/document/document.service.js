@@ -57,6 +57,13 @@ export class DocumentService {
     return { ...document, role };
   }
 
+  async updateDocumentTitle(documentId, userId, title) {
+    await this.assertCanEdit(documentId, userId);
+    const normalizedTitle = String(title || "").trim() || "Untitled Document";
+    await this.repository.updateDocumentSnapshot(documentId, { title: normalizedTitle });
+    return this.getDocument(documentId, userId);
+  }
+
   async saveDocument(documentId, userId, payload) {
     await this.assertCanEdit(documentId, userId);
     await this.repository.updateDocumentSnapshot(documentId, payload);
@@ -78,7 +85,10 @@ export class DocumentService {
   async createVersion(documentId, userId) {
     await this.assertCanEdit(documentId, userId);
     const version = await this.repository.createVersion(documentId, userId);
-    if (!version) throw httpError(404, "Document not found");
+    
+    if (version === null) {
+      throw httpError(400, "No new updates available to create a version");
+    }
     return version;
   }
 

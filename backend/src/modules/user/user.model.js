@@ -22,6 +22,12 @@ User.init(
       type: DataTypes.STRING(255),
       field: "password_hash"
     },
+    sessionVersion: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+      field: "session_version"
+    },
     createdAt: {
       type: DataTypes.DATE,
       field: "created_at"

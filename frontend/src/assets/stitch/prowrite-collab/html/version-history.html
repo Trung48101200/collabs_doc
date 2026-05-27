@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ProWrite Collab - Version History</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9f9ff;
+        }
+        .editor-canvas {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .drawer-transition {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .version-item:hover .version-actions {
+            opacity: 1;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed-dim": "#c5c7c8",
+                        "secondary-container": "#e1e3e4",
+                        "background": "#f9f9ff",
+                        "on-secondary-fixed-variant": "#454748",
+                        "tertiary-fixed": "#d9e3f4",
+                        "primary-container": "#2563eb",
+                        "outline": "#737686",
+                        "tertiary-container": "#646e7d",
+                        "on-tertiary-container": "#e9f1ff",
+                        "tertiary-fixed-dim": "#bdc7d8",
+                        "on-tertiary-fixed-variant": "#3e4755",
+                        "surface-dim": "#d3daef",
+                        "on-primary-container": "#eeefff",
+                        "surface-variant": "#dce2f7",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "primary-fixed": "#dbe1ff",
+                        "secondary-fixed": "#e1e3e4",
+                        "surface-container-low": "#f1f3ff",
+                        "surface-container-high": "#e1e8fd",
+                        "secondary": "#5c5f60",
+                        "surface-container": "#e9edff",
+                        "outline-variant": "#c3c6d7",
+                        "on-surface": "#141b2b",
+                        "surface": "#f9f9ff",
+                        "surface-tint": "#0053db",
+                        "on-background": "#141b2b",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6",
+                        "inverse-surface": "#293040",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "surface-bright": "#f9f9ff",
+                        "inverse-on-surface": "#edf0ff",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed": "#191c1d",
+                        "primary": "#004ac6",
+                        "on-error": "#ffffff",
+                        "surface-container-highest": "#dce2f7",
+                        "on-secondary-container": "#626566",
+                        "inverse-primary": "#b4c5ff",
+                        "tertiary": "#4c5664",
+                        "on-primary-fixed": "#00174b",
+                        "on-surface-variant": "#434655",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed": "#121c28",
+                        "on-primary-fixed-variant": "#003ea8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "40px",
+                        "sm": "16px",
+                        "editor-max-width": "800px",
+                        "xl": "48px",
+                        "xs": "8px",
+                        "lg": "32px",
+                        "gutter": "24px",
+                        "base": "4px",
+                        "margin-mobile": "16px",
+                        "md": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "30px", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-md": ["14px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface overflow-hidden">
+<!-- Top Navigation Bar (Shared Component) -->
+<header class="flex justify-between items-center w-full px-md py-xs h-16 sticky top-0 z-50 bg-surface border-b border-outline-variant">
+<div class="flex items-center gap-md">
+<span class="text-headline-md font-headline-md font-bold text-primary">ProWrite Collab</span>
+<div class="hidden md:flex items-center gap-sm">
+<nav class="flex gap-md">
+<a class="text-primary font-bold border-b-2 border-primary py-1 font-label-md text-label-md" href="#">Documents</a>
+<a class="text-secondary hover:bg-surface-container transition-colors py-1 font-label-md text-label-md" href="#">Shared</a>
+<a class="text-secondary hover:bg-surface-container transition-colors py-1 font-label-md text-label-md" href="#">Drafts</a>
+</nav>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-xs text-on-surface-variant hover:bg-surface-container rounded-full transition-colors material-symbols-outlined" data-icon="history">history</button>
+<button class="flex items-center gap-xs px-sm py-xs bg-primary-container text-on-primary-container font-label-md text-label-md rounded-lg transition-transform active:scale-95">
+<span class="material-symbols-outlined text-[18px]" data-icon="share">share</span>
+<span>Share</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant">
+<img alt="User profile avatar" data-alt="A clean, professional headshot of a user with a friendly expression, set against a soft grey studio background. The lighting is bright and even, reinforcing a professional corporate identity. The aesthetic is high-end and minimalist, consistent with a modern workspace application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBkX-y6yr-tXwNDe54-VD0L9aQayCavcCRzFlLi68DU0yutbKkX-CcnWeWTAGT0ZJxvpzXBCnPAttwvWW-_LsLZCJ-xyTgaCfvaHSx9CRBUf4RWjMeUKlVDMmt0773xWfY3AFwCB-QlJ029Q3vhtdi6JK28DKZXnY8AqBjVvTjOsLiHezMTXX7ZIdKmsAa2Im8eAkpiWuQnz8GKRlV6oAu3A3cO0xvr4andfiyz5RXbwv35dYCjRtTvGn1_ZX0z4yclo4nmf9cv1BsI"/>
+</div>
+</div>
+</header>
+<main class="flex h-[calc(100vh-64px)] overflow-hidden">
+<!-- Sidebar Navigation (Shared Component) -->
+<aside class="hidden lg:flex flex-col h-full w-[260px] bg-surface-container-low border-r border-outline-variant p-sm">
+<div class="mb-lg">
+<h2 class="font-headline-sm text-headline-sm text-on-surface px-xs">Workspace</h2>
+<p class="font-label-sm text-label-sm text-secondary px-xs">Collaborative Team</p>
+</div>
+<button class="flex items-center gap-sm px-sm py-md bg-primary-container text-on-primary-container rounded-lg mb-md transition-all hover:brightness-110">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+<span class="font-label-md text-label-md">New Document</span>
+</button>
+<nav class="flex-1 flex flex-col gap-xs">
+<div class="flex items-center gap-sm px-sm py-xs bg-primary-container text-on-primary rounded-lg">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-body-md text-body-md">Documents</span>
+</div>
+<div class="flex items-center gap-sm px-sm py-xs text-on-surface-variant hover:bg-surface-variant rounded-lg transition-colors cursor-pointer">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-body-md text-body-md">Shared</span>
+</div>
+<div class="flex items-center gap-sm px-sm py-xs text-on-surface-variant hover:bg-surface-variant rounded-lg transition-colors cursor-pointer">
+<span class="material-symbols-outlined" data-icon="edit_note">edit_note</span>
+<span class="font-body-md text-body-md">Drafts</span>
+</div>
+<div class="flex items-center gap-sm px-sm py-xs text-on-surface-variant hover:bg-surface-variant rounded-lg transition-colors cursor-pointer">
+<span class="material-symbols-outlined" data-icon="archive">archive</span>
+<span class="font-body-md text-body-md">Archive</span>
+</div>
+</nav>
+<div class="border-t border-outline-variant pt-sm mt-auto">
+<div class="flex items-center gap-sm px-sm py-xs text-on-surface-variant hover:bg-surface-variant rounded-lg transition-colors cursor-pointer">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</div>
+<div class="flex items-center gap-sm px-sm py-xs text-on-surface-variant hover:bg-surface-variant rounded-lg transition-colors cursor-pointer">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-label-sm text-label-sm">Help</span>
+</div>
+</div>
+</aside>
+<!-- Editor Content Area -->
+<div class="relative flex-1 bg-surface-container-lowest overflow-y-auto p-md lg:p-xl">
+<div class="editor-canvas">
+<div class="mb-lg">
+<div class="flex items-center gap-xs text-primary mb-xs">
+<span class="material-symbols-outlined text-[20px]" data-icon="description">description</span>
+<span class="font-label-sm text-label-sm uppercase tracking-wider">Proposal Draft</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface mb-md">Q4 Strategic Roadmap &amp; Team Alignment</h1>
+<div class="flex items-center gap-sm">
+<div class="flex -space-x-2">
+<img class="w-8 h-8 rounded-full border-2 border-surface-container-lowest" data-alt="A small circular user avatar with a colorful, abstract person illustration, symbolizing an active presence in a collaborative digital environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBR7SRvPO9wbyZxF-cQ9R3D3hgXMPXVQhBrCBLyjlV_4A7NntQ9uZqdEB2991uNwfgvCN5JSvQSvA5c01CeKm45P67GtN3aeB1-q4OXqbx4Q8DEbAizonnsljkIMoAQLqdcvHSs56KUUXvdb1W2QS9w23E0Z4D4l5Yl5N4ts7YXw99hOmazIUAvQnuib7-ULZLuNrHpSW3AwIiEHnXA8dl4zly_DeR0H2OzLOEVMuTll3e2dZWvH9B6N2rChMEHLxB2JI-uf9fUedsH"/>
+<img class="w-8 h-8 rounded-full border-2 border-surface-container-lowest" data-alt="A high-quality digital avatar of a female collaborator with glasses, using a bright and clean aesthetic. The background is a soft blue, aligning with a professional tech tool interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWTQkxQ0nu4yMfJkslrE4CzKVdz-JHER67ZPJtGwIcIkAOoq_cV8OJ2pYHYQrn8d7Vg8XGGLkLrHQ6XkXlH7Y0Ua7hDi0IqDAHuCXOQjGu0_e7KNCIkPp0zq4E_bGYdgNRRLb6rTq21iPqG8LNrOw8y7dQ2H2c8k9X1BzgVdzkbxi9twFWY2qK2sEBf8zr3ZUWV5iMt5Eu6nSmNkXDHABdJ_Hql18rnlWohgw1ZYNaP7L1xYy6JhJRwwykiSQhQxgVMGA6oAcXXmQm"/>
+</div>
+<span class="text-secondary font-label-md text-label-md">2 editors active</span>
+</div>
+</div>
+<div class="space-y-md font-body-lg text-body-lg text-on-surface leading-relaxed">
+<p>The objective for Q4 focuses on expanding our global presence through strategic partnerships and internal efficiency optimizations. We aim to achieve a 15% increase in user retention by refining our collaborative workspace experience.</p>
+<p>Key pillars include:</p>
+<ul class="list-disc pl-md space-y-sm">
+<li>Integration of real-time collaborative feedback loops</li>
+<li>Enhanced data visualization for project milestones</li>
+<li>Automated version control and recovery systems</li>
+</ul>
+<p>As we scale, maintaining a distraction-free environment for deep work remains our top priority. This document serves as the foundational agreement for all department leads.</p>
+</div>
+</div>
+<!-- Version History Drawer (The Task) -->
+<div class="fixed top-0 right-0 h-full w-[360px] bg-surface-container-lowest shadow-2xl z-[60] border-l border-outline-variant drawer-transition transform translate-x-0" id="versionDrawer">
+<div class="flex flex-col h-full">
+<!-- Drawer Header -->
+<div class="flex justify-between items-center p-md border-b border-outline-variant">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary" data-icon="history">history</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Version History</h2>
+</div>
+<button class="p-xs hover:bg-surface-container rounded-full transition-colors text-on-surface-variant cursor-pointer" onclick="toggleDrawer()">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<!-- Version List -->
+<div class="flex-1 overflow-y-auto py-sm">
+<!-- Version Item 1 (Active/Current) -->
+<div class="version-item group relative px-md py-sm bg-surface-container-low border-l-4 border-primary">
+<div class="flex justify-between items-start mb-base">
+<span class="font-label-sm text-label-sm text-primary uppercase font-bold">Current Version</span>
+<span class="font-label-sm text-label-sm text-on-surface">v1.5</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface font-semibold mb-xs">Created by Alex</p>
+<p class="font-label-sm text-label-sm text-secondary">Oct 24, 2023, 10:30 AM</p>
+<div class="version-actions absolute inset-y-0 right-md flex items-center gap-xs opacity-0 transition-opacity">
+<button class="px-sm py-1 bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm rounded-lg hover:bg-primary hover:text-white transition-colors">Preview</button>
+</div>
+</div>
+<!-- Version Item 2 -->
+<div class="version-item group relative px-md py-sm hover:bg-surface-container-low transition-colors cursor-pointer border-l-4 border-transparent">
+<div class="flex justify-between items-start mb-base">
+<span class="font-label-sm text-label-sm text-secondary">PREVIOUS</span>
+<span class="font-label-sm text-label-sm text-on-surface">v1.4</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface mb-xs">Created by Sarah Miller</p>
+<p class="font-label-sm text-label-sm text-secondary">Oct 23, 2023, 04:15 PM</p>
+<div class="version-actions absolute inset-y-0 right-md flex items-center gap-xs opacity-0 transition-opacity">
+<button class="px-sm py-1 bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm rounded-lg hover:bg-primary-container transition-colors">Preview</button>
+<button class="px-sm py-1 bg-primary text-on-primary font-label-sm text-label-sm rounded-lg hover:brightness-110 transition-colors">Restore</button>
+</div>
+</div>
+<!-- Version Item 3 -->
+<div class="version-item group relative px-md py-sm hover:bg-surface-container-low transition-colors cursor-pointer border-l-4 border-transparent">
+<div class="flex justify-between items-start mb-base">
+<span class="font-label-sm text-label-sm text-secondary">MILESTONE</span>
+<span class="font-label-sm text-label-sm text-on-surface">v1.0</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface mb-xs">Created by Alex</p>
+<p class="font-label-sm text-label-sm text-secondary">Oct 20, 2023, 09:00 AM</p>
+<div class="version-actions absolute inset-y-0 right-md flex items-center gap-xs opacity-0 transition-opacity">
+<button class="px-sm py-1 bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm rounded-lg hover:bg-primary-container transition-colors">Preview</button>
+<button class="px-sm py-1 bg-primary text-on-primary font-label-sm text-label-sm rounded-lg hover:brightness-110 transition-colors">Restore</button>
+</div>
+</div>
+<!-- Version Item 4 -->
+<div class="version-item group relative px-md py-sm hover:bg-surface-container-low transition-colors cursor-pointer border-l-4 border-transparent">
+<div class="flex justify-between items-start mb-base">
+<span class="font-label-sm text-label-sm text-secondary">INITIAL DRAFT</span>
+<span class="font-label-sm text-label-sm text-on-surface">v0.1</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface mb-xs">Created by Felix Wu</p>
+<p class="font-label-sm text-label-sm text-secondary">Oct 18, 2023, 02:45 PM</p>
+<div class="version-actions absolute inset-y-0 right-md flex items-center gap-xs opacity-0 transition-opacity">
+<button class="px-sm py-1 bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm rounded-lg hover:bg-primary-container transition-colors">Preview</button>
+<button class="px-sm py-1 bg-primary text-on-primary font-label-sm text-label-sm rounded-lg hover:brightness-110 transition-colors">Restore</button>
+</div>
+</div>
+</div>
+<!-- Drawer Footer (Shared Component Guidance) -->
+<footer class="flex flex-col gap-sm p-md border-t border-outline-variant bg-surface-container-lowest">
+<p class="font-label-sm text-label-sm text-secondary">Versions are automatically saved every 10 minutes or when significant changes are made.</p>
+<button class="w-full flex justify-center items-center gap-xs px-sm py-xs border border-outline-variant text-on-surface-variant font-label-md text-label-md rounded-lg hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="file_download">file_download</span>
+                            Download Archive
+                        </button>
+</footer>
+</div>
+</div>
+</div>
+</main>
+<!-- Page Footer (Shared Component) -->
+<footer class="flex justify-between items-center px-md py-sm w-full bg-surface-container-lowest border-t border-outline-variant fixed bottom-0 left-0 z-40">
+<span class="font-label-md text-label-md text-secondary">© 2024 ProWrite Systems. All rights reserved.</span>
+<div class="flex gap-md">
+<a class="font-label-sm text-label-sm text-secondary hover:text-primary underline transition-opacity" href="#">Privacy Policy</a>
+<a class="font-label-sm text-label-sm text-secondary hover:text-primary underline transition-opacity" href="#">Terms of Service</a>
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+<span class="font-label-sm text-label-sm text-secondary">Status</span>
+</div>
+</div>
+</footer>
+<script>
+        function toggleDrawer() {
+            const drawer = document.getElementById('versionDrawer');
+            if (drawer.style.transform === 'translateX(100%)') {
+                drawer.style.transform = 'translateX(0)';
+            } else {
+                drawer.style.transform = 'translateX(100%)';
+            }
+        }
+        
+        // Initial state logic (could be triggered by clicking History icon in TopNav)
+        document.querySelector('[data-icon="history"]').addEventListener('click', () => {
+            const drawer = document.getElementById('versionDrawer');
+            drawer.style.transform = (drawer.style.transform === 'translateX(0px)' || drawer.style.transform === '') ? 'translateX(100%)' : 'translateX(0)';
+        });
+    </script>
+</body></html>

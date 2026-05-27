@@ -1,4 +1,5 @@
 import * as Y from "yjs";
+import { Op } from "sequelize";
 import {
   Document,
   DocumentCollaborator,
@@ -44,6 +45,10 @@ function serializeVersion(version) {
     contentText: plain.contentText || "",
     contentJson: plain.contentJson || { type: "doc", content: [] },
     contentHtml: plain.contentHtml || "",
+    changeSetKey: plain.changeSetKey || null,
+    fromUpdateId: plain.fromUpdateId ? normalizeId(plain.fromUpdateId) : null,
+    toUpdateId: plain.toUpdateId ? normalizeId(plain.toUpdateId) : null,
+    updateCount: plain.updateCount || 0,
     createdBy: plain.createdBy ? normalizeId(plain.createdBy) : null,
     createdAt: plain.createdAt
   };
@@ -139,6 +144,10 @@ export class DocumentRepository {
       contentJson: document.contentJson,
       contentHtml: document.contentHtml,
       ydocSnapshot: document.ydocState,
+      changeSetKey: `doc:${document.id}:updates:0-0:v1`,
+      fromUpdateId: null,
+      toUpdateId: null,
+      updateCount: 0,
       createdBy: ownerId
     });
 
@@ -152,16 +161,20 @@ export class DocumentRepository {
 
   async updateDocumentSnapshot(id, payload) {
     const { title, contentText, contentJson, contentHtml, ydocState } = payload;
-    const update = {
-      contentText: contentText || "",
-      contentJson: contentJson || { type: "doc", content: [] },
-      contentHtml: contentHtml || "",
-      ydocState: ydocState ? Buffer.from(ydocState, "base64") : null
-    };
+    const update = {};
 
-    if (title) update.title = title;
+    if (title !== undefined) update.title = title;
+    if (contentText !== undefined) update.contentText = contentText;
+    if (contentJson !== undefined) update.contentJson = contentJson;
+    if (contentHtml !== undefined) update.contentHtml = contentHtml;
+    if (ydocState !== undefined) {
+      update.ydocState = ydocState ? Buffer.from(ydocState, "base64") : null;
+    }
 
-    await Document.update(update, { where: { id } });
+    if (Object.keys(update).length > 0) {
+      await Document.update(update, { where: { id } });
+    }
+
     return this.findDocumentById(id);
   }
 
@@ -170,16 +183,20 @@ export class DocumentRepository {
   }
 
   async getRole(documentId, userId) {
+    const document = await Document.findByPk(documentId, {
+      attributes: ["ownerId"]
+    });
+    
+    if (document && Number(document.ownerId) === Number(userId)) {
+      return "owner";
+    }
+
     const collaborator = await DocumentCollaborator.findOne({
       where: { documentId, userId }
     });
 
     if (collaborator) return collaborator.role;
-
-    const document = await Document.findByPk(documentId, {
-      attributes: ["ownerId"]
-    });
-    return Number(document?.ownerId) === Number(userId) ? "owner" : null;
+    return null;
   }
 
   async listVersions(documentId) {
@@ -195,10 +212,25 @@ export class DocumentRepository {
     const document = await Document.findByPk(documentId);
     if (!document) return null;
 
-    const latestVersion = await DocumentVersion.max("versionNumber", {
-      where: { documentId }
+    const latestVersion = await DocumentVersion.findOne({
+      where: { documentId },
+      order: [["versionNumber", "DESC"]]
     });
-    const versionNumber = Number(latestVersion || 0) + 1;
+    const versionNumber = Number(latestVersion?.versionNumber || 0) + 1;
+    const previousToUpdateId = Number(latestVersion?.toUpdateId || 0);
+    const updates = await DocumentUpdate.findAll({
+      where: {
+        documentId,
+        id: { [Op.gt]: previousToUpdateId }
+      },
+      attributes: ["id"],
+      order: [["id", "ASC"]]
+    });
+    const fromUpdateId = updates.length ? Number(updates[0].id) : null;
+    const toUpdateId = updates.length ? Number(updates[updates.length - 1].id) : previousToUpdateId || null;
+    const updateCount = updates.length;
+
+    const changeSetKey = `doc:${documentId}:updates:${fromUpdateId || previousToUpdateId || 0}-${toUpdateId || previousToUpdateId || 0}:v${versionNumber}`;
 
     const version = await DocumentVersion.create({
       documentId,
@@ -207,6 +239,10 @@ export class DocumentRepository {
       contentJson: document.contentJson,
       contentHtml: document.contentHtml,
       ydocSnapshot: document.ydocState,
+      changeSetKey,
+      fromUpdateId,
+      toUpdateId,
+      updateCount,
       createdBy: userId
     });
 

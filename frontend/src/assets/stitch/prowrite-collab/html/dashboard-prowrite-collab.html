@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ProWrite Collab - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary": "#ffffff",
+                      "secondary-fixed-dim": "#c5c7c8",
+                      "secondary-container": "#e1e3e4",
+                      "background": "#f9f9ff",
+                      "on-secondary-fixed-variant": "#454748",
+                      "tertiary-fixed": "#d9e3f4",
+                      "primary-container": "#2563eb",
+                      "outline": "#737686",
+                      "tertiary-container": "#646e7d",
+                      "on-tertiary-container": "#e9f1ff",
+                      "tertiary-fixed-dim": "#bdc7d8",
+                      "on-tertiary-fixed-variant": "#3e4755",
+                      "surface-dim": "#d3daef",
+                      "on-primary-container": "#eeefff",
+                      "surface-variant": "#dce2f7",
+                      "primary-fixed-dim": "#b4c5ff",
+                      "primary-fixed": "#dbe1ff",
+                      "secondary-fixed": "#e1e3e4",
+                      "surface-container-low": "#f1f3ff",
+                      "surface-container-high": "#e1e8fd",
+                      "secondary": "#5c5f60",
+                      "surface-container": "#e9edff",
+                      "outline-variant": "#c3c6d7",
+                      "on-surface": "#141b2b",
+                      "surface": "#f9f9ff",
+                      "surface-tint": "#0053db",
+                      "on-background": "#141b2b",
+                      "on-error-container": "#93000a",
+                      "error-container": "#ffdad6",
+                      "inverse-surface": "#293040",
+                      "surface-container-lowest": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "surface-bright": "#f9f9ff",
+                      "inverse-on-surface": "#edf0ff",
+                      "on-secondary": "#ffffff",
+                      "on-secondary-fixed": "#191c1d",
+                      "primary": "#004ac6",
+                      "on-error": "#ffffff",
+                      "surface-container-highest": "#dce2f7",
+                      "on-secondary-container": "#626566",
+                      "inverse-primary": "#b4c5ff",
+                      "tertiary": "#4c5664",
+                      "on-primary-fixed": "#00174b",
+                      "on-surface-variant": "#434655",
+                      "error": "#ba1a1a",
+                      "on-tertiary-fixed": "#121c28",
+                      "on-primary-fixed-variant": "#003ea8"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin-desktop": "40px",
+                      "sm": "16px",
+                      "editor-max-width": "800px",
+                      "xl": "48px",
+                      "xs": "8px",
+                      "lg": "32px",
+                      "gutter": "24px",
+                      "base": "4px",
+                      "margin-mobile": "16px",
+                      "md": "24px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "body-md": ["Inter"],
+                      "label-md": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "headline-sm": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-md": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-md": ["14px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "30px", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f9f9ff; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .document-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline flex justify-between items-center w-full px-md py-xs h-16 sticky top-0 z-50 flat no shadows">
+<div class="flex items-center gap-lg">
+<span class="text-headline-md font-headline-md font-bold text-primary dark:text-primary-fixed">ProWrite Collab</span>
+<div class="relative hidden md:block w-96">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 text-body-md focus:ring-2 focus:ring-primary-container outline-none transition-all" placeholder="Search documents..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<div class="flex gap-sm">
+<button class="material-symbols-outlined text-secondary hover:bg-surface-container dark:hover:bg-surface-container-high p-2 rounded-full transition-colors cursor-pointer active:scale-95">history</button>
+<button class="material-symbols-outlined text-secondary hover:bg-surface-container dark:hover:bg-surface-container-high p-2 rounded-full transition-colors cursor-pointer active:scale-95">share</button>
+</div>
+<button class="bg-primary-container text-on-primary-container px-md py-2 rounded-lg font-label-md transition-all hover:opacity-90 active:scale-95">Share</button>
+<img alt="User profile avatar" class="w-10 h-10 rounded-full border-2 border-surface-variant cursor-pointer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKGlJEa8va__InmXUbBqy_OW3_zRBR7lQr34JdC7DwUfDGea8lDMHAlgTWpEC_Y7dOvJ8FJ0tAtmVzqFPDRP2derAOJCPkffScPMBzFEIZ8kEwerhlyoL-QKfMbfzEpjRDx9rp6MHN8SFA7_CjqROc88Dx8zkifBFSXdhlfvADBVkINkYGeW1562QuR9pnTGqOodCiEudxaytApZeV49x57__dQRkq7gjSnObfKJ45-Cf6fTaZ5llJZknNnkUBdn_gTgOLdkgBW3Ga"/>
+</div>
+</header>
+<div class="flex h-[calc(100vh-64px)] overflow-hidden">
+<!-- SideNavBar -->
+<nav class="bg-surface-container-low dark:bg-surface-container-lowest border-r border-outline-variant dark:border-outline fixed left-0 h-full w-[260px] flex flex-col p-sm hidden md:flex">
+<div class="mb-lg px-xs">
+<div class="flex items-center gap-sm mb-base">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[20px]">group_work</span>
+</div>
+<div>
+<p class="font-headline-sm text-headline-sm text-on-surface dark:text-on-surface-variant">Workspace</p>
+<p class="font-label-sm text-label-sm text-secondary">Collaborative Team</p>
+</div>
+</div>
+</div>
+<button class="mb-lg bg-primary text-on-primary px-md py-3 rounded-lg flex items-center justify-center gap-sm font-label-md hover:shadow-lg transition-all active:scale-95">
+<span class="material-symbols-outlined">add</span>
+                New Document
+            </button>
+<div class="flex flex-col gap-xs flex-grow">
+<a class="bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-lg flex items-center gap-sm px-md py-3 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-label-sm text-label-sm">Documents</span>
+</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-surface-container-high rounded-lg flex items-center gap-sm px-md py-3 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-sm text-label-sm">Shared</span>
+</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-surface-container-high rounded-lg flex items-center gap-sm px-md py-3 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">edit_note</span>
+<span class="font-label-sm text-label-sm">Drafts</span>
+</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-surface-container-high rounded-lg flex items-center gap-sm px-md py-3 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">archive</span>
+<span class="font-label-sm text-label-sm">Archive</span>
+</a>
+</div>
+<div class="border-t border-outline-variant pt-sm flex flex-col gap-xs">
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-surface-container-high rounded-lg flex items-center gap-sm px-md py-2 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-surface-container-high rounded-lg flex items-center gap-sm px-md py-2 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-label-sm text-label-sm">Help</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-grow md:ml-[260px] overflow-y-auto p-md lg:p-xl bg-background">
+<div class="max-w-7xl mx-auto">
+<div class="flex justify-between items-end mb-xl">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Your Documents</h1>
+<p class="font-body-md text-body-md text-secondary">Manage and collaborate on your latest writing projects.</p>
+</div>
+<div class="flex gap-sm">
+<button class="flex items-center gap-xs px-md py-2 bg-surface-container border border-outline-variant rounded-lg text-on-surface hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+<span class="font-label-md text-label-md">Grid</span>
+</button>
+<button class="flex items-center gap-xs px-md py-2 bg-surface border border-outline-variant rounded-lg text-secondary hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[20px]">list</span>
+<span class="font-label-md text-label-md">List</span>
+</button>
+</div>
+</div>
+<!-- Bento Grid / Document Cards -->
+<div class="document-grid">
+<!-- Doc 1 -->
+<div class="group bg-surface-container-lowest border border-outline-variant p-md rounded-xl hover:shadow-md transition-all duration-300 relative">
+<div class="flex justify-between items-start mb-sm">
+<div class="p-2 bg-primary-container/10 rounded-lg">
+<span class="material-symbols-outlined text-primary">description</span>
+</div>
+<div class="flex gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="material-symbols-outlined text-secondary hover:text-primary p-1">edit</button>
+<button class="material-symbols-outlined text-secondary hover:text-error p-1">delete</button>
+</div>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs group-hover:text-primary transition-colors">Q3 Strategy Roadmap</h3>
+<p class="font-body-sm text-body-sm text-secondary line-clamp-2 mb-md">This document outlines the core objectives for the upcoming third quarter focusing on expansion into APAC markets and user retention...</p>
+<div class="flex flex-wrap gap-xs mb-md">
+<span class="px-2 py-0.5 bg-surface-container text-secondary font-label-sm text-label-sm rounded">v1.4</span>
+<span class="px-2 py-0.5 bg-primary/10 text-primary font-label-sm text-label-sm rounded">Owner</span>
+</div>
+<div class="flex justify-between items-center pt-md border-t border-outline-variant">
+<div class="flex items-center gap-xs">
+<img alt="Sarah Johnson" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3KVFHl8m-q0i1ThmnJM-hviixUG82M7HKMjRFcQoRJmdkZ8WGGUYWRDFY5MWbKu_n3Vz_YH08KcmVvnf0QFLbrv6YrvDEaOZAuVUaMuUagSXIOVO4neDjtXJRiRiomk9ea-ksO9ivCGAbb7IcHhaZfbjShIJC-ZU9zI-k8mCiHzd5hb-gx7JaxTrnW3qVlShmGWZFqB_zRX73fTPkh4lFzUXhrpfJr4JGgn_-m0eSqLNo9PdHOe_BKxRMGjLQ60cLJzkobkPSDS3X"/>
+<span class="font-label-sm text-label-sm text-on-surface">Sarah Johnson</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary">2 hours ago</span>
+</div>
+</div>
+<!-- Doc 2 -->
+<div class="group bg-surface-container-lowest border border-outline-variant p-md rounded-xl hover:shadow-md transition-all duration-300 relative">
+<div class="flex justify-between items-start mb-sm">
+<div class="p-2 bg-tertiary-fixed rounded-lg">
+<span class="material-symbols-outlined text-tertiary">article</span>
+</div>
+<div class="flex gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="material-symbols-outlined text-secondary hover:text-primary p-1">edit</button>
+<button class="material-symbols-outlined text-secondary hover:text-error p-1">delete</button>
+</div>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs group-hover:text-primary transition-colors">Brand Identity Guidelines</h3>
+<p class="font-body-sm text-body-sm text-secondary line-clamp-2 mb-md">Comprehensive guide for brand colors, typography, and logo usage for all marketing collateral in 2024.</p>
+<div class="flex flex-wrap gap-xs mb-md">
+<span class="px-2 py-0.5 bg-surface-container text-secondary font-label-sm text-label-sm rounded">v2.1</span>
+<span class="px-2 py-0.5 bg-secondary-container text-secondary font-label-sm text-label-sm rounded">Editor</span>
+</div>
+<div class="flex justify-between items-center pt-md border-t border-outline-variant">
+<div class="flex items-center gap-xs">
+<img alt="Marcus Chen" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDFICyw0xecMT1OnOSc6hdqTtUuPETbyD3h0r3JXEpkqfn0KGfW46El5b3kb2FoPzqqfNcnlxsgq2xiH2BztLoKWNdnhs48bfVgrpomAGbCCscyckh9FO1p_PLaiz_Ehfc9IELboEy63Gxql73eBOnbjoWpLy1uDJALYS5FwxSom5KSkr5lv-rW_-1WIwYpw9pdihKsHOOrPeMLNHMycSIhhHtVUUf2--NAdIAI3jOa9lLIqYJFg38bAQE9W_1tQtLvV0kthEmptusK"/>
+<span class="font-label-sm text-label-sm text-on-surface">Marcus Chen</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary">5 hours ago</span>
+</div>
+</div>
+<!-- Doc 3 -->
+<div class="group bg-surface-container-lowest border border-outline-variant p-md rounded-xl hover:shadow-md transition-all duration-300 relative">
+<div class="flex justify-between items-start mb-sm">
+<div class="p-2 bg-surface-variant rounded-lg">
+<span class="material-symbols-outlined text-on-surface-variant">terminal</span>
+</div>
+<div class="flex gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="material-symbols-outlined text-secondary hover:text-primary p-1">edit</button>
+<button class="material-symbols-outlined text-secondary hover:text-error p-1">delete</button>
+</div>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs group-hover:text-primary transition-colors">API Documentation Draft</h3>
+<p class="font-body-sm text-body-sm text-secondary line-clamp-2 mb-md">Internal technical specs for the new GraphQL endpoints and authentication middleware implementation...</p>
+<div class="flex flex-wrap gap-xs mb-md">
+<span class="px-2 py-0.5 bg-surface-container text-secondary font-label-sm text-label-sm rounded">v0.8</span>
+<span class="px-2 py-0.5 bg-primary/10 text-primary font-label-sm text-label-sm rounded">Owner</span>
+</div>
+<div class="flex justify-between items-center pt-md border-t border-outline-variant">
+<div class="flex items-center gap-xs">
+<img alt="Sarah Johnson" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLg_ExWT_H4rIRj4i35-vPnSood1nJl_DUXPb2Vat6eh7SqeF3NhxxdLcmBWOcRRsaL-hwOAhvCgbeW4Hz17dbbwWOyZj-FX3ObaWPJxRm05SJ5Wgb9y-v6fJ5DOE2ghNJlxQVl1PCy86nssQ9fiCjuTiZTPkGqa-D_DNrrEsZA_upruGFqkhehPHofa_ltLVULltJ5PNV7U-z26X0uU23bDS8cCi0GbEVxwgit4umqRuymb4OhhwuFsyrz2xilNzIf5OEaOXh6hvS"/>
+<span class="font-label-sm text-label-sm text-on-surface">Sarah Johnson</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary">Yesterday</span>
+</div>
+</div>
+<!-- Doc 4 -->
+<div class="group bg-surface-container-lowest border border-outline-variant p-md rounded-xl hover:shadow-md transition-all duration-300 relative">
+<div class="flex justify-between items-start mb-sm">
+<div class="p-2 bg-error-container/20 rounded-lg">
+<span class="material-symbols-outlined text-error">assignment_late</span>
+</div>
+<div class="flex gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="material-symbols-outlined text-secondary hover:text-primary p-1">edit</button>
+<button class="material-symbols-outlined text-secondary hover:text-error p-1">delete</button>
+</div>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs group-hover:text-primary transition-colors">Risk Assessment 2024</h3>
+<p class="font-body-sm text-body-sm text-secondary line-clamp-2 mb-md">Security audit findings and mitigation plans for the core database clusters and edge network infrastructure.</p>
+<div class="flex flex-wrap gap-xs mb-md">
+<span class="px-2 py-0.5 bg-surface-container text-secondary font-label-sm text-label-sm rounded">v1.2</span>
+<span class="px-2 py-0.5 bg-secondary-container text-secondary font-label-sm text-label-sm rounded">Viewer</span>
+</div>
+<div class="flex justify-between items-center pt-md border-t border-outline-variant">
+<div class="flex items-center gap-xs">
+<img alt="David Miller" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALPr2xPgn0F1hRtEHSr-fbZp75VKzFHSpVgPTiwQOowI8S4H4PAP0HwwvWUDtAtQFQRyzkfYCmuBMSr7G55MU7a4gd0YBicCvwZT8oy_3JKq9UmY0R0Ftlmg6IkaVokBV0IVxYF-KwHbtnURUvY6PB8x5pQ0m3MtprLG3Sv9vtJwW3ssg0oUIfyC0-pwQAxM_4C84NVnyWFWZtTME-DTRct2qr5h2REHVCxpM353xiBYGHwoDFDTrcUNgwyXcxrQkyZ4e7-xyey8LM"/>
+<span class="font-label-sm text-label-sm text-on-surface">David Miller</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary">3 days ago</span>
+</div>
+</div>
+</div>
+<!-- Subtle Banner Section -->
+<div class="mt-xl relative rounded-xl overflow-hidden bg-primary-container p-xl flex items-center justify-between text-on-primary-container">
+<div class="z-10 relative">
+<h2 class="font-headline-md text-headline-md mb-xs">Collaborate in real-time.</h2>
+<p class="font-body-md text-body-md opacity-90 max-w-md">Invite your team members to any document and see changes as they happen. Start a new session now.</p>
+<button class="mt-md bg-on-primary-container text-primary-container px-lg py-3 rounded-lg font-label-md hover:bg-white transition-colors">Get Started</button>
+</div>
+<div class="hidden md:block absolute right-0 top-0 bottom-0 w-1/3 overflow-hidden opacity-20">
+<img class="w-full h-full object-cover" data-alt="A professional team collaborating around a sleek conference table in a modern, glass-walled office. The lighting is bright and natural, creating a high-energy productivity mood. The workspace is clean and minimalist, featuring advanced digital tools and large screens with elegant data visualizations. Soft blue and white tones dominate the scene, reflecting a premium corporate identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQ3DT2ozwb_VFaQi8E8mghORwbdKaBricdKfft-Btn05k02d39AXb9VOA02YfHXXGhHES6dN4pDIg2E_XQAS3ypxVWt_xbBPGM6tzbKmpT6erw0mMEDW_sUiXGoY70Oovnnpi-lr6QE6w4fZX6GA21wtP4qQhH_CRuAszO0vBU1rQH0fEfPD6eTuyAWTBVavVmvjpnlduYSj6DKSaP45KcF9aadKFrE1U_Gg1Yy__z7aM7980xeUuBv7ovuoWpZOsCnDaPCSqnLLYf"/>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest dark:bg-surface-dim border-t border-outline-variant dark:border-outline flex justify-between items-center px-md py-sm w-full fixed bottom-0 z-40">
+<span class="font-label-md text-label-md text-secondary">© 2024 ProWrite Systems. All rights reserved.</span>
+<div class="flex gap-md">
+<a class="font-label-sm text-label-sm text-secondary hover:text-primary dark:hover:text-primary-fixed underline transition-opacity duration-150" href="#">Privacy Policy</a>
+<a class="font-label-sm text-label-sm text-secondary hover:text-primary dark:hover:text-primary-fixed underline transition-opacity duration-150" href="#">Terms of Service</a>
+<a class="font-label-sm text-label-sm text-secondary hover:text-primary dark:hover:text-primary-fixed underline transition-opacity duration-150" href="#">Status</a>
+</div>
+</footer>
+<script>
+        // Micro-interactions
+        document.querySelectorAll('.active\\:scale-95').forEach(button => {
+            button.addEventListener('mousedown', () => {
+                button.style.transform = 'scale(0.95)';
+            });
+            button.addEventListener('mouseup', () => {
+                button.style.transform = 'scale(1)';
+            });
+            button.addEventListener('mouseleave', () => {
+                button.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body></html>
