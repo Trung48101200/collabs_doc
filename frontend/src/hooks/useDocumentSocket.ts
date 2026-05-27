@@ -7,12 +7,11 @@ import { SocketEvents } from "../socket/socketEvents";
 import { registerDocumentSocketHandlers } from "../socket/socketHandlers";
 import {
   applyAwarenessUpdateBytes,
-  applyUpdateArray,
   decodeBase64ToUint8Array,
   encodeAwarenessUpdate,
-  encodeStateAsBase64
 } from "../utils/yjsEncoding";
 import type { DocumentRole, User } from "../types";
+import { getDocument } from "../services/documentApi";
 
 interface UseDocumentSocketResult {
   ydoc: Y.Doc;
@@ -27,9 +26,14 @@ interface UseDocumentSocketResult {
 const useMocks = import.meta.env.VITE_USE_MOCKS === "true";
 
 export function useDocumentSocket(documentId: number, user: User, role: DocumentRole): UseDocumentSocketResult {
+  const [initialized, setInitialized] = useState(false);
   const [connectionState, setConnectionState] = useState<"connecting" | "online" | "offline">(useMocks ? "offline" : "connecting");
   const [onlineUsers, setOnlineUsers] = useState<User[]>([user]);
   const [socketError, setSocketError] = useState(false);
+
+  useEffect(() => {
+    setInitialized(false);
+  }, [documentId]);
 
   const ydoc = useMemo(() => new Y.Doc(), [documentId]);
   const awareness = useMemo(() => new Awareness(ydoc), [ydoc]);
@@ -45,7 +49,60 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
   }, [ydoc, awareness, socket]);
 
   useEffect(() => {
-    const persistence = new IndexeddbPersistence(`document-${documentId}`, ydoc);
+    const persistence =
+    new IndexeddbPersistence(
+      `document-${documentId}`,
+      ydoc
+    )
+
+    persistence.once(
+      "synced",
+      async ()=>{
+          try{
+              // lấy document mới nhất
+              const latestDocument =
+                await getDocument(
+                    documentId,
+                    user
+                )
+              if(
+                latestDocument?.ydocState
+              ){
+                const update=
+                  decodeBase64ToUint8Array(
+                    latestDocument.ydocState
+                  )
+                // reset hoàn toàn state cũ
+                ydoc.transact(()=>{
+                    const text=
+                      ydoc.getText(
+                        "default"
+                      )
+                    text.delete(
+                      0,
+                      text.length
+                    )
+                })
+                Y.applyUpdate(
+                    ydoc,
+                    update,
+                    "remote"
+                )
+              }
+              setInitialized(
+                true
+              )
+          }
+          catch(e){
+            console.error(e)
+          }
+    })
+
+    if (!useMocks && !initialized) {
+      return () => {
+        persistence.destroy();
+      };
+    }
 
     if (useMocks || socketError) {
       awareness.setLocalStateField("user", {
@@ -91,7 +148,7 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
         onVersionRestored: (ydocState) => {
           if (ydocState) {
             const update = decodeBase64ToUint8Array(ydocState);
-            Y.applyUpdate(ydoc, update, "remote");
+            resetYdocState(update);
           }
         }
       });
@@ -127,6 +184,18 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
           });
         } catch (err) {
           console.error("Failed to emit Yjs update:", err);
+        }
+      };
+
+      const resetYdocState = (update: Uint8Array) => {
+        try {
+          ydoc.transact(() => {
+            const text = ydoc.getText("default");
+            text.delete(0, text.length);
+          });
+          Y.applyUpdate(ydoc, update, "remote");
+        } catch (err) {
+          console.error("Failed to reset Yjs document state:", err);
         }
       };
 
@@ -173,7 +242,7 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
         persistence.destroy();
       };
     }
-  }, [documentId, socket, user, ydoc, awareness, role, socketError]);
+  }, [documentId, socket, user, ydoc, awareness, role, socketError, initialized]);
 
   const sendSaveRequest = useCallback(() => {
     if (useMocks || socketError || !socket.connected) return;

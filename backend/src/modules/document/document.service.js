@@ -78,7 +78,10 @@ export class DocumentService {
   async createVersion(documentId, userId) {
     await this.assertCanEdit(documentId, userId);
     const version = await this.repository.createVersion(documentId, userId);
-    if (!version) throw httpError(404, "Document not found");
+    console.log("Created version:", version);
+    if (version === null) {
+      throw httpError(400, "No new updates available to create a version");
+    }
     return version;
   }
 

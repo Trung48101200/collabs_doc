@@ -372,11 +372,44 @@ select {
   flex: 1;
   min-height: 100%;
   word-wrap: break-word;
+  position: relative;
 }
 
 .editor-content {
   min-height: 100%;
   width: 100%;
+}
+
+.editor-paper .ProseMirror .collaboration-cursor {
+  position: absolute;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.editor-paper .ProseMirror .collaboration-cursor__caret {
+  position: absolute;
+  width: 2px;
+  height: 1.4em;
+  background-color: currentColor;
+  border-radius: 1px;
+}
+
+.editor-paper .ProseMirror .collaboration-cursor__label {
+  position: absolute;
+  top: -1.55rem;
+  left: -0.15rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.65rem;
+  background-color: currentColor;
+  color: #ffffff;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.editor-paper .ProseMirror .collaboration-selection {
+  background-color: rgba(59, 130, 246, 0.2);
+  border-radius: 0.2rem;
 }
 
 .editor-paper .ProseMirror h1,
@@ -1740,10 +1773,10 @@ body {
 .stitch-primary-button {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: start;
   gap: 8px;
   min-height: 40px;
-  padding: 9px 18px;
+  padding: 8px 14px;
   border-radius: 8px;
   background: var(--stitch-primary);
   color: #ffffff;
@@ -1968,7 +2001,9 @@ body {
 .stitch-topbar-left,
 .stitch-topbar-actions,
 .editor-topbar-actions,
-.editor-title-row {
+.editor-title-row,
+.title-display-row,
+.title-text-row {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -2834,6 +2869,11 @@ body {
   display: block;
   color: var(--stitch-muted);
   line-height: 1.45;
+}
+
+.version-item-action {
+  display: flex;
+  gap: 10px;
 }
 
 .version-restore-button {

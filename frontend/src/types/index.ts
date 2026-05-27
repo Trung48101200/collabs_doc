@@ -32,6 +32,7 @@ export interface DocumentModel {
   contentJson: unknown;
   contentHtml: string;
   role: DocumentRole;
+  ydocState?: string;
   versions?: DocumentVersion[];
 }
 
