@@ -1,6 +1,6 @@
 import type { User } from "../types";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_URL = import.meta.env.VITE_API_URL || "http://backend:4000";
 const STORAGE_KEY = "collab-doc-user";
 const SESSION_EXPIRED_EVENT = "collab-doc-session-expired";
 const SESSION_UPDATED_EVENT = "collab-doc-session-updated";
