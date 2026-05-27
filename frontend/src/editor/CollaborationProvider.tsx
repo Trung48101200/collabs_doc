@@ -7,6 +7,9 @@ interface CollaborationContextValue {
   awareness: import("y-protocols/awareness").Awareness;
   connectionState: "connecting" | "online" | "offline";
   onlineUsers: User[];
+  remoteCursors: Record<number, { from: number; to: number }>;
+  writeBlocked: boolean;
+  sendCursorUpdate: (cursor: { from: number; to: number }) => void;
   sendSaveRequest: () => void;
   sendVersionRequest: () => void;
   sendSyncRequest: () => void;
@@ -18,14 +21,16 @@ export function CollaborationProvider({
   documentId,
   user,
   role,
+  initialYdocState,
   children
 }: {
   documentId: number;
   user: User;
   role: DocumentRole;
+  initialYdocState?: string;
   children: ReactNode;
 }) {
-  const collaboration = useDocumentSocket(documentId, user, role);
+  const collaboration = useDocumentSocket(documentId, user, role, initialYdocState);
 
   return <CollaborationContext.Provider value={collaboration}>{children}</CollaborationContext.Provider>;
 }

@@ -58,6 +58,7 @@ async function runMigration() {
     await ensureColumn(connection, "document_versions", "from_update_id", "BIGINT");
     await ensureColumn(connection, "document_versions", "to_update_id", "BIGINT");
     await ensureColumn(connection, "document_versions", "update_count", "INT DEFAULT 0");
+    await ensureColumn(connection, "users", "session_version", "INT NOT NULL DEFAULT 1");
 
     console.log("Database migration completed successfully!");
   } catch (error) {

@@ -18,6 +18,7 @@ function createAccessToken(user) {
       id: user.id,
       email: user.email,
       name: user.name,
+      sv: Number(user.sessionVersion || 1),
       jti: Math.random().toString(36).substring(2) + Date.now()
     },
     getJwtSecret(),
@@ -62,6 +63,7 @@ authRoutes.post("/login", async (req, res, next) => {
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) throw httpError(400, "Invalid email or password");
 
+    // Multi-tab policy: do not invalidate existing sessions on new login.
     const accessToken = createAccessToken(user);
     const refreshToken = jwt.sign({ id: user.id }, `${getJwtSecret()}-refresh`, {
       expiresIn: "7d"

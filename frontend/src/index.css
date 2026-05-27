@@ -343,6 +343,7 @@ select {
 }
 
 .editor-paper {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -466,6 +467,46 @@ select {
 
 .editor-paper .ProseMirror mark {
   background-color: rgba(234, 179, 8, 0.3);
+}
+
+/* Remote collaborator cursors (TipTap CollaborationCursor) */
+.editor-paper .ProseMirror .collaboration-cursor__caret,
+.editor-paper .ProseMirror .collaboration-carets__caret,
+.tiptap .collaboration-cursor__caret,
+.tiptap .collaboration-carets__caret {
+  border-left: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  margin-left: -1px;
+  margin-right: -1px;
+  pointer-events: none;
+  position: relative;
+  word-break: normal;
+}
+
+.editor-paper .ProseMirror .collaboration-cursor__label,
+.editor-paper .ProseMirror .collaboration-carets__label,
+.tiptap .collaboration-cursor__label,
+.tiptap .collaboration-carets__label {
+  border-radius: 4px 4px 4px 0;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  left: -1px;
+  line-height: 1.2;
+  padding: 2px 6px;
+  position: absolute;
+  top: -1.55em;
+  user-select: none;
+  white-space: nowrap;
+  z-index: 20;
+}
+
+.editor-paper .ProseMirror .collaboration-cursor__selection,
+.editor-paper .ProseMirror .collaboration-carets__selection,
+.tiptap .collaboration-cursor__selection,
+.tiptap .collaboration-carets__selection {
+  opacity: 0.22;
+  pointer-events: none;
 }
 
 /* =========================================
@@ -2636,6 +2677,7 @@ body {
 }
 
 .editor-paper {
+  position: relative;
   width: min(800px, 100%);
   min-height: 820px;
   margin: 0 auto;

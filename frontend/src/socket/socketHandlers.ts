@@ -12,8 +12,10 @@ export interface DocumentSocketHandlers {
   onUserList?: (users: User[]) => void;
   onRemoteUpdate?: (update: Uint8Array) => void;
   onAwarenessUpdate?: (update: Uint8Array) => void;
+  onCursorUpdate?: (payload: { userId: number; cursor: { from: number; to: number } }) => void;
   onSyncStateResponse?: (update: Uint8Array) => void;
   onVersionRestored?: (ydocState: string) => void;
+  onAccessDenied?: (payload: { documentId?: number; message?: string }) => void;
 }
 
 export function registerDocumentSocketHandlers(
@@ -32,12 +34,16 @@ export function registerDocumentSocketHandlers(
     // If backend sends awareness object directly
     if (awarenessData) handlers.onAwarenessUpdate?.(Uint8Array.from(awarenessData));
   });
+  socket.on(SocketEvents.CursorUpdate, ({ userId, cursor }) => {
+    if (userId && cursor) handlers.onCursorUpdate?.({ userId, cursor });
+  });
   socket.on(SocketEvents.SyncStateResponse, ({ update }) => {
     if (update) handlers.onSyncStateResponse?.(Uint8Array.from(update));
   });
   socket.on(SocketEvents.VersionRestored, ({ ydocState }) => {
     if (ydocState) handlers.onVersionRestored?.(ydocState);
   });
+  socket.on(SocketEvents.AccessDenied, (payload) => handlers.onAccessDenied?.(payload || {}));
 
   return () => {
     socket.off("connect");
@@ -45,7 +51,9 @@ export function registerDocumentSocketHandlers(
     socket.off(SocketEvents.UserList);
     socket.off(SocketEvents.YjsUpdate);
     socket.off(SocketEvents.AwarenessUpdate);
+    socket.off(SocketEvents.CursorUpdate);
     socket.off(SocketEvents.SyncStateResponse);
     socket.off(SocketEvents.VersionRestored);
+    socket.off(SocketEvents.AccessDenied);
   };
 }

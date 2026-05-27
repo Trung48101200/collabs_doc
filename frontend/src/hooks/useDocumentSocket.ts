@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import { IndexeddbPersistence } from "y-indexeddb";
@@ -8,7 +8,7 @@ import { registerDocumentSocketHandlers } from "../socket/socketHandlers";
 import {
   applyAwarenessUpdateBytes,
   decodeBase64ToUint8Array,
-  encodeAwarenessUpdate,
+  encodeAwarenessUpdate
 } from "../utils/yjsEncoding";
 import type { DocumentRole, User } from "../types";
 import { getDocument } from "../services/documentApi";
@@ -18,28 +18,53 @@ interface UseDocumentSocketResult {
   awareness: Awareness;
   connectionState: "connecting" | "online" | "offline";
   onlineUsers: User[];
+  remoteCursors: Record<number, { from: number; to: number }>;
+  writeBlocked: boolean;
+  sendCursorUpdate: (cursor: { from: number; to: number }) => void;
   sendSaveRequest: () => void;
   sendVersionRequest: () => void;
   sendSyncRequest: () => void;
 }
 
 const useMocks = import.meta.env.VITE_USE_MOCKS === "true";
+const SESSION_UPDATED_EVENT = "collab-doc-session-updated";
+const SESSION_EXPIRED_EVENT = "collab-doc-session-expired";
+const STORAGE_KEY = "collab-doc-user";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
-export function useDocumentSocket(documentId: number, user: User, role: DocumentRole): UseDocumentSocketResult {
-  const [initialized, setInitialized] = useState(false);
+export function useDocumentSocket(documentId: number, user: User, role: DocumentRole, initialYdocState?: string): UseDocumentSocketResult {
   const [connectionState, setConnectionState] = useState<"connecting" | "online" | "offline">(useMocks ? "offline" : "connecting");
   const [onlineUsers, setOnlineUsers] = useState<User[]>([user]);
-  const [socketError, setSocketError] = useState(false);
+  const [remoteCursors, setRemoteCursors] = useState<Record<number, { from: number; to: number }>>({});
+  const [writeBlocked, setWriteBlocked] = useState(false);
+  const writeBlockedRef = useRef(false);
+  const pendingUpdatesRef = useRef<Uint8Array[]>([]);
+  const initialStateAppliedRef = useRef(false);
+  const authRefreshInFlightRef = useRef(false);
+
+  const ydoc = useMemo(() => {
+    const doc = new Y.Doc();
+    return doc;
+  }, [documentId]);
+  const awareness = useMemo(() => new Awareness(ydoc), [ydoc]);
+  const socket = useMemo(() => createSocketClient(user.token), [documentId, user.token]);
 
   useEffect(() => {
-    setInitialized(false);
+    initialStateAppliedRef.current = false;
   }, [documentId]);
 
-  const ydoc = useMemo(() => new Y.Doc(), [documentId]);
-  const awareness = useMemo(() => new Awareness(ydoc), [ydoc]);
-  const socket = useMemo(() => createSocketClient(), [documentId]);
+  useEffect(() => {
+    if (initialStateAppliedRef.current) return;
+    if (!initialYdocState) return;
+    try {
+      const update = decodeBase64ToUint8Array(initialYdocState);
+      Y.applyUpdate(ydoc, update, "remote");
+      initialStateAppliedRef.current = true;
+    } catch (err) {
+      console.error("Failed to apply initial ydoc state:", err);
+    }
+  }, [initialYdocState, ydoc]);
 
-  // Handle destruction separately to avoid destroying active instances on socket error re-runs
   useEffect(() => {
     return () => {
       ydoc.destroy();
@@ -49,96 +74,104 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
   }, [ydoc, awareness, socket]);
 
   useEffect(() => {
-    const persistence =
-    new IndexeddbPersistence(
-      `document-${documentId}`,
-      ydoc
-    )
+    const persistence = new IndexeddbPersistence(`document-${documentId}`, ydoc);
+    let persistenceReady = false;
+    let cancelled = false;
+    const connectSocketIfNeeded = () => {
+      if (useMocks || cancelled || socket.connected || socket.active) return;
+      socket.connect();
+    };
 
-    persistence.once(
-      "synced",
-      async ()=>{
-          try{
-              // lấy document mới nhất
-              const latestDocument =
-                await getDocument(
-                    documentId,
-                    user
-                )
-              if(
-                latestDocument?.ydocState
-              ){
-                const update=
-                  decodeBase64ToUint8Array(
-                    latestDocument.ydocState
-                  )
-                // reset hoàn toàn state cũ
-                ydoc.transact(()=>{
-                    const text=
-                      ydoc.getText(
-                        "default"
-                      )
-                    text.delete(
-                      0,
-                      text.length
-                    )
-                })
-                Y.applyUpdate(
-                    ydoc,
-                    update,
-                    "remote"
-                )
-              }
-              setInitialized(
-                true
-              )
-          }
-          catch(e){
-            console.error(e)
-          }
-    })
+    const requestServerSync = () => {
+      if (cancelled || useMocks || !persistenceReady || !socket.connected) return;
+      try {
+        const stateVector = Y.encodeStateVector(ydoc);
+        socket.emit(SocketEvents.SyncStateRequest, {
+          documentId,
+          stateVector: Array.from(stateVector)
+        });
+      } catch (err) {
+        console.error("Failed to send sync request:", err);
+      }
+    };
 
-    if (!useMocks && !initialized) {
+    persistence.whenSynced.then(() => {
+      if (cancelled) return;
+      persistenceReady = true;
+      requestServerSync();
+    });
+
+    awareness.setLocalStateField("user", {
+      id: user.id,
+      name: user.name,
+      color: user.color
+    });
+
+    if (useMocks) {
       return () => {
-        persistence.destroy();
-      };
-    }
-
-    if (useMocks || socketError) {
-      awareness.setLocalStateField("user", {
-        id: user.id,
-        name: user.name,
-        color: user.color
-      });
-      return () => {
+        cancelled = true;
         persistence.destroy();
       };
     }
 
     try {
+      const emitYjsUpdate = (update: Uint8Array) => {
+        socket.emit(SocketEvents.YjsUpdate, {
+          documentId,
+          userId: user.id,
+          update: Array.from(update),
+          clientId: socket.id
+        });
+      };
+
+      const flushPendingUpdates = () => {
+        if (!socket.connected || pendingUpdatesRef.current.length === 0) return;
+        const mergedUpdate = Y.mergeUpdates(pendingUpdatesRef.current);
+        pendingUpdatesRef.current = [];
+        emitYjsUpdate(mergedUpdate);
+      };
+
+      const handleSocketConnected = () => {
+        setConnectionState("online");
+        socket.emit(SocketEvents.JoinDocument, {
+          documentId,
+          user: { id: user.id, name: user.name, color: user.color }
+        });
+        flushPendingUpdates();
+        requestServerSync();
+      };
+
       const cleanupSocket = registerDocumentSocketHandlers(socket, ydoc, awareness, {
         onConnect: () => {
-          setConnectionState("online");
-          setSocketError(false);
-          socket.emit(SocketEvents.JoinDocument, { documentId, user });
-          
-          const stateVector = Y.encodeStateVector(ydoc);
-          socket.emit(SocketEvents.SyncStateRequest, {
-            documentId,
-            stateVector: Array.from(stateVector)
-          });
+          handleSocketConnected();
         },
         onDisconnect: () => {
           setConnectionState("offline");
         },
         onUserList: (users) => {
           setOnlineUsers(users);
+          const ids = new Set(users.map((item) => item.id));
+          setRemoteCursors((prev) => {
+            const next: Record<number, { from: number; to: number }> = {};
+            for (const [key, value] of Object.entries(prev)) {
+              if (ids.has(Number(key))) next[Number(key)] = value;
+            }
+            return next;
+          });
         },
         onRemoteUpdate: (update) => {
           Y.applyUpdate(ydoc, update, "remote");
         },
         onAwarenessUpdate: (update) => {
           applyAwarenessUpdateBytes(awareness, Array.from(update));
+        },
+        onCursorUpdate: ({ userId, cursor }) => {
+          if (!userId || userId === user.id) return;
+          if (!cursor || typeof cursor.from !== "number" || typeof cursor.to !== "number") return;
+          setRemoteCursors((prev) => ({
+            ...prev,
+            [userId]: { from: cursor.from, to: cursor.to }
+          }));
         },
         onSyncStateResponse: (update) => {
           if (update) {
@@ -150,40 +183,104 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
             const update = decodeBase64ToUint8Array(ydocState);
             resetYdocState(update);
           }
+        },
+        onAccessDenied: ({ message }) => {
+          const normalized = String(message || "").toLowerCase();
+          if (normalized.includes("edit") || normalized.includes("viewer")) {
+            writeBlockedRef.current = true;
+            setWriteBlocked(true);
+            return;
+          }
+          setConnectionState("offline");
         }
       });
 
-      const handleConnectError = (error: any) => {
+      const handleConnectError = (error: unknown) => {
         console.error("Socket connection error:", error);
-        if (String(error?.message || "").toLowerCase().includes("authentication error")) {
-          localStorage.removeItem("collab-doc-user");
-          window.dispatchEvent(new Event("collab-doc-session-expired"));
+        const message = String((error as { message?: string })?.message || "").toLowerCase();
+        if (message.includes("authentication error")) {
+          if (authRefreshInFlightRef.current) {
+            setConnectionState("offline");
+            return;
+          }
+          const raw = localStorage.getItem(STORAGE_KEY);
+          const savedUser = raw ? (JSON.parse(raw) as User) : null;
+          if (savedUser?.refreshToken) {
+            authRefreshInFlightRef.current = true;
+            fetch(`${API_URL}/api/auth/refresh`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ refreshToken: savedUser.refreshToken })
+            })
+              .then(async (response) => {
+                if (!response.ok) throw new Error("refresh failed");
+                const data = await response.json();
+                const token = data?.accessToken || data?.token;
+                if (!token) throw new Error("missing access token");
+                const updatedUser = { ...savedUser, token };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
+                window.dispatchEvent(new CustomEvent(SESSION_UPDATED_EVENT, { detail: updatedUser }));
+                socket.auth = { token };
+                connectSocketIfNeeded();
+              })
+              .catch(() => {
+                window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+              })
+              .finally(() => {
+                authRefreshInFlightRef.current = false;
+              });
+            return;
+          }
+          window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+          return;
         }
-        setSocketError(true);
         setConnectionState("offline");
       };
 
-      const handleError = (error: any) => {
+      const handleError = (error: unknown) => {
         console.error("Socket error:", error);
-        setSocketError(true);
+        setConnectionState("offline");
       };
 
       socket.on("connect_error", handleConnectError);
       socket.on("error", handleError);
 
+      const handleSessionUpdated = (event: Event) => {
+        const nextUser = (event as CustomEvent<User>).detail;
+        const nextToken = nextUser?.token;
+        if (!nextToken) return;
+        socket.auth = { token: nextToken };
+        connectSocketIfNeeded();
+      };
+
+      const handleSessionExpired = () => {
+        if (socket.connected) {
+          socket.disconnect();
+        }
+        setConnectionState("offline");
+      };
+
+      window.addEventListener(SESSION_UPDATED_EVENT, handleSessionUpdated);
+      window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+      if (socket.connected) {
+        handleSocketConnected();
+      } else {
+        connectSocketIfNeeded();
+      }
+
       const handleLocalUpdate = (update: Uint8Array, origin: unknown) => {
         if (origin === "remote") return;
-        if (role === "viewer") return;
+        if (role === "viewer" || writeBlockedRef.current) return;
+        if (!socket.connected) {
+          pendingUpdatesRef.current.push(update);
+          return;
+        }
 
         try {
-          socket.emit(SocketEvents.YjsUpdate, {
-            documentId,
-            userId: user.id,
-            update: Array.from(update),
-            clientId: socket.id
-          });
+          emitYjsUpdate(update);
         } catch (err) {
           console.error("Failed to emit Yjs update:", err);
+          pendingUpdatesRef.current.push(update);
         }
       };
 
@@ -201,16 +298,10 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
 
       ydoc.on("update", handleLocalUpdate);
 
-      awareness.setLocalStateField("user", {
-        id: user.id,
-        name: user.name,
-        color: user.color
-      });
-
-      const awarenessListener = ({ added, updated, removed }: any, origin: any) => {
+      const awarenessListener = ({ added, updated, removed }: { added: number[]; updated: number[]; removed: number[] }, origin: unknown) => {
         if (origin === "remote") return;
         const changedClients = [...added, ...updated, ...removed];
-        if (changedClients.length === 0) return;
+        if (changedClients.length === 0 || !socket.connected) return;
         const awarenessUpdate = encodeAwarenessUpdate(awareness, changedClients);
 
         try {
@@ -226,8 +317,11 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
       awareness.on("update", awarenessListener);
 
       return () => {
+        cancelled = true;
         socket.removeListener("connect_error", handleConnectError);
         socket.removeListener("error", handleError);
+        window.removeEventListener(SESSION_UPDATED_EVENT, handleSessionUpdated);
+        window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
         socket.emit(SocketEvents.LeaveDocument, { documentId, userId: user.id });
         ydoc.off("update", handleLocalUpdate);
         awareness.off("update", awarenessListener);
@@ -236,34 +330,47 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
       };
     } catch (err) {
       console.error("Socket initialization error:", err);
-      setSocketError(true);
       setConnectionState("offline");
       return () => {
+        cancelled = true;
         persistence.destroy();
       };
     }
-  }, [documentId, socket, user, ydoc, awareness, role, socketError, initialized]);
+  }, [documentId, socket, user.id, user.name, user.color, role, ydoc, awareness]);
 
   const sendSaveRequest = useCallback(() => {
-    if (useMocks || socketError || !socket.connected) return;
+    if (useMocks || !socket.connected) return;
     try {
       socket.emit(SocketEvents.SaveDocument, { documentId, userId: user.id });
     } catch (err) {
       console.error("Failed to send save request:", err);
     }
-  }, [documentId, socket, user.id, socketError]);
+  }, [documentId, socket, user.id]);
+
+  const sendCursorUpdate = useCallback((cursor: { from: number; to: number }) => {
+    if (useMocks || !socket.connected) return;
+    try {
+      socket.emit(SocketEvents.CursorUpdate, {
+        documentId,
+        userId: user.id,
+        cursor
+      });
+    } catch (err) {
+      console.error("Failed to send cursor update:", err);
+    }
+  }, [documentId, socket, user.id]);
 
   const sendVersionRequest = useCallback(() => {
-    if (useMocks || socketError || !socket.connected) return;
+    if (useMocks || !socket.connected) return;
     try {
       socket.emit(SocketEvents.CreateVersion, { documentId, userId: user.id });
     } catch (err) {
       console.error("Failed to send version request:", err);
     }
-  }, [documentId, socket, user.id, socketError]);
+  }, [documentId, socket, user.id]);
 
   const sendSyncRequest = useCallback(() => {
-    if (useMocks || socketError || !socket.connected) return;
+    if (useMocks || !socket.connected) return;
     try {
       const stateVector = Y.encodeStateVector(ydoc);
       socket.emit(SocketEvents.SyncStateRequest, {
@@ -273,15 +380,18 @@ export function useDocumentSocket(documentId: number, user: User, role: Document
     } catch (err) {
       console.error("Failed to send sync request:", err);
     }
-  }, [documentId, socket, ydoc, socketError]);
+  }, [documentId, socket, ydoc]);
 
   return useMemo(() => ({
     ydoc,
     awareness,
     connectionState,
     onlineUsers,
+    remoteCursors,
+    writeBlocked,
+    sendCursorUpdate,
     sendSaveRequest,
     sendVersionRequest,
     sendSyncRequest
-  }), [ydoc, awareness, connectionState, onlineUsers, sendSaveRequest, sendVersionRequest, sendSyncRequest]);
+  }), [ydoc, awareness, connectionState, onlineUsers, remoteCursors, writeBlocked, sendCursorUpdate, sendSaveRequest, sendVersionRequest, sendSyncRequest]);
 }

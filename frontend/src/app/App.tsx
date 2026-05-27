@@ -7,12 +7,23 @@ import { DocumentsPage } from "../pages/Documents/DocumentsPage";
 import { EditorPage } from "../pages/Editor/EditorPage";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import type { User } from "../types";
+import { getUserColor } from "../utils/userColor";
+
+function withUserColor(user: User): User {
+  return {
+    ...user,
+    color: user.color || getUserColor(user.id)
+  };
+}
 
 export function App() {
   const [user, setUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem("collab-doc-user");
-      return saved ? (JSON.parse(saved) as User) : null;
+      if (!saved) return null;
+      const parsed = withUserColor(JSON.parse(saved) as User);
+      localStorage.setItem("collab-doc-user", JSON.stringify(parsed));
+      return parsed;
     } catch (err) {
       console.error("Failed to load user from localStorage", err);
       localStorage.removeItem("collab-doc-user");
@@ -22,11 +33,13 @@ export function App() {
 
   const setSessionUser = useCallback((nextUser: User | null) => {
     if (nextUser) {
-      localStorage.setItem("collab-doc-user", JSON.stringify(nextUser));
+      const normalized = withUserColor(nextUser);
+      localStorage.setItem("collab-doc-user", JSON.stringify(normalized));
+      setUser(normalized);
     } else {
       localStorage.removeItem("collab-doc-user");
+      setUser(null);
     }
-    setUser(nextUser);
   }, []);
 
   useEffect(() => {
@@ -36,15 +49,32 @@ export function App() {
 
     const handleSessionUpdated = (event: Event) => {
       const nextUser = (event as CustomEvent<User>).detail;
-      if (nextUser) setUser(nextUser);
+      if (nextUser) setUser(withUserColor(nextUser));
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== "collab-doc-user") return;
+      if (event.newValue) {
+        try {
+          const nextUser = JSON.parse(event.newValue) as User;
+          setUser(withUserColor(nextUser));
+        } catch {
+          setSessionUser(null);
+        }
+        return;
+      }
+      // user removed in another tab
+      setSessionUser(null);
     };
 
     window.addEventListener("collab-doc-session-expired", handleSessionExpired);
     window.addEventListener("collab-doc-session-updated", handleSessionUpdated);
+    window.addEventListener("storage", handleStorage);
 
     return () => {
       window.removeEventListener("collab-doc-session-expired", handleSessionExpired);
       window.removeEventListener("collab-doc-session-updated", handleSessionUpdated);
+      window.removeEventListener("storage", handleStorage);
     };
   }, [setSessionUser]);
 

@@ -31,12 +31,17 @@ function EditorLoadedWorkspace({ document, user }: { document: DocumentModel; us
   const { collaborators, invite, remove, updateRole } = useDocumentCollaborators(document.id, user);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isVersionOpen, setIsVersionOpen] = useState(false);
+// --- Quản lý tài liệu và tiêu đề (từ nhánh feature/frontend-init) ---
   const [currentDocument, setCurrentDocument] = useState<DocumentModel>(document);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(document.title || "");
   const [titleSaving, setTitleSaving] = useState(false);
   const [titleError, setTitleError] = useState<string | null>(null);
 
+  // --- Quản lý hiển thị người dùng cùng thao tác (từ nhánh collab/sync-cursor) ---
+  const [presenceUsers, setPresenceUsers] = useState<User[]>([]);
+
+  // --- Effects và Logic ---
   useEffect(() => {
     setCurrentDocument(document);
     setTitleDraft(document.title || "");
@@ -47,6 +52,12 @@ function EditorLoadedWorkspace({ document, user }: { document: DocumentModel; us
   const visibleCollaborators = collaborators.length
     ? collaborators
     : [{ id: user.id, userId: user.id, name: user.name, email: user.email, role: currentDocument.role, color: user.color }];
+
+  const activeUsers = presenceUsers.slice(0, 3);
+  const activeCount = presenceUsers.length;
+  const onlineLabel = presenceUsers.length
+    ? presenceUsers.map((item) => item.name || `User ${item.id}`).join(", ")
+    : "No one online";
 
   return (
     <div className="stitch-editor-shell">
@@ -174,13 +185,20 @@ function EditorLoadedWorkspace({ document, user }: { document: DocumentModel; us
 
           <div className="editor-topbar-actions">
             <div className="stacked-avatars" aria-label="Active collaborators">
-              {visibleCollaborators.slice(0, 3).map((collaborator) => (
-                <div className="small-avatar" style={{ backgroundColor: collaborator.color || "#2563eb" }} key={collaborator.userId}>
+              {activeUsers.map((collaborator) => (
+                <div
+                  className="small-avatar"
+                  style={{ backgroundColor: collaborator.color || "#2563eb" }}
+                  key={"userId" in collaborator ? collaborator.userId : collaborator.id}
+                >
                   {(collaborator.name || "U").charAt(0).toUpperCase()}
                 </div>
               ))}
-              {visibleCollaborators.length > 3 ? <div className="small-avatar muted">+{visibleCollaborators.length - 3}</div> : null}
+              {activeCount > 3 ? <div className="small-avatar muted">+{activeCount - 3}</div> : null}
             </div>
+            <span className="stitch-muted" title={onlineLabel}>
+              Online ({activeCount}): {onlineLabel}
+            </span>
             <button className="stitch-icon-button" type="button" onClick={() => setIsVersionOpen(true)} aria-label="Open version history">
               <History size={18} />
             </button>
@@ -203,6 +221,7 @@ function EditorLoadedWorkspace({ document, user }: { document: DocumentModel; us
             user={user}
             isVersionOpen={isVersionOpen}
             onCloseVersions={() => setIsVersionOpen(false)}
+            onPresenceChange={setPresenceUsers}
           />
         </ErrorBoundary>
       </main>

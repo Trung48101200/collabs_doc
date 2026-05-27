@@ -69,8 +69,7 @@ export interface DocumentSocketPayloads {
   };
   awarenessUpdate: {
     documentId: number;
-    update: number[];
-    clientId: string;
+    awareness: number[];
   };
   cursorUpdate: {
     documentId: number;

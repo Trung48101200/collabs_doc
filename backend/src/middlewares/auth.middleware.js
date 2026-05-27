@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { httpError } from "../utils/http-error.js";
 import { tokenRepository } from "../modules/auth/token.repository.js";
+import { userRepository } from "../modules/user/user.repository.js";
 
 export async function authMiddleware(req, _res, next) {
   const authHeader = req.headers.authorization;
@@ -25,6 +26,10 @@ export async function authMiddleware(req, _res, next) {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "admin-collab-docs-super-secret-key-2026");
+    const user = await userRepository.findUserById(Number(decoded.id));
+    if (!user) {
+      return next(httpError(401, "Invalid or expired token."));
+    }
     const fallbackUserId = Number(req.header("x-user-id") || 0);
     if (fallbackUserId > 0 && fallbackUserId !== Number(decoded.id)) {
       return next(httpError(401, "Session user mismatch. Please sign in again."));
